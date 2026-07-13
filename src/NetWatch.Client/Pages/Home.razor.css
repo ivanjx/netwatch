@@ -1,0 +1,52 @@
+.lede {
+    color: #4c5d6b;
+    font-size: 1.15rem;
+}
+
+dl {
+    display: grid;
+    gap: 0.5rem 1rem;
+    grid-template-columns: max-content 1fr;
+    margin: 2rem 0;
+}
+
+dt {
+    font-weight: 600;
+}
+
+dd {
+    margin: 0;
+}
+
+.primary-button {
+    background: #1769aa;
+    border: 1px solid #145b93;
+    border-radius: 0.3rem;
+    color: #fff;
+    cursor: pointer;
+    font: inherit;
+    padding: 0.6rem 1rem;
+}
+
+.primary-button:hover:not(:disabled) {
+    background: #125789;
+}
+
+.primary-button:disabled {
+    cursor: wait;
+    opacity: 0.65;
+}
+
+.primary-button:focus-visible {
+    outline: 3px solid #8bc6f5;
+    outline-offset: 2px;
+}
+
+.success-message {
+    background: #e8f5ec;
+    border: 1px solid #9bcbaa;
+    border-radius: 0.3rem;
+    color: #174c28;
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+}

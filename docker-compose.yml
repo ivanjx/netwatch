@@ -1,0 +1,20 @@
+services:
+  netwatch:
+    image: ghcr.io/ivanjx/netwatch:latest
+    container_name: netwatch
+    environment:
+      NETFLOW_LISTEN_PORT: 2055
+      MIKROTIK_BASE_URL: http://192.168.88.1
+      MIKROTIK_USERNAME: netwatch
+      MIKROTIK_PASSWORD: change-me
+      MIKROTIK_ALLOW_INVALID_CERTIFICATE: "false"
+      MIKROTIK_TORCH_INTERFACE: bridge
+    ports:
+      - "8080:8080/tcp" # Web UI port
+      - "2055:2055/udp" # Mikrotik Traffic Flow port
+    volumes:
+      - netwatch-data:/data
+    restart: unless-stopped
+
+volumes:
+  netwatch-data:

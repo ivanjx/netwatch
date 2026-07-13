@@ -1,0 +1,43 @@
+.page {
+    min-height: 100vh;
+}
+
+header {
+    align-items: center;
+    background: #12304a;
+    color: #fff;
+    display: flex;
+    gap: 1rem;
+    padding: 1rem 2rem;
+}
+
+header a {
+    color: inherit;
+    font-size: 1.25rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+header span {
+    color: #c7d6e2;
+    font-size: 0.9rem;
+}
+
+.content {
+    margin: 0 auto;
+    max-width: 64rem;
+    padding: 2rem;
+}
+
+@media (max-width: 640px) {
+    header {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.25rem;
+        padding: 1rem;
+    }
+
+    .content {
+        padding: 1.25rem 1rem;
+    }
+}
