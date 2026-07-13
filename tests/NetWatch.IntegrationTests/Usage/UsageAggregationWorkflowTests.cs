@@ -68,7 +68,7 @@ public sealed class UsageAggregationWorkflowTests
                 CancellationToken.None));
             accumulator.Clear();
 
-            var usageService = new UsageService(usageRepository, options);
+            var usageService = new UsageService(usageRepository, options, TimeProvider.System);
             var summary = Assert.IsType<UsageSummaryResult>(
                 await usageService.GetSummaryAsync(null, null, null, CancellationToken.None)).Value;
             Assert.Equal("America/New_York", summary.TimeZone);
@@ -105,7 +105,8 @@ public sealed class UsageAggregationWorkflowTests
 
             var restartedService = new UsageService(
                 new UsageRepository(connectionFactory, NullLogger<UsageRepository>.Instance),
-                options);
+                options,
+                TimeProvider.System);
             var devicesResult = Assert.IsType<DeviceUsageListResult>(await restartedService.GetDevicesAsync(
                 observedAtUtc.AddHours(-1).ToString("O"),
                 observedAtUtc.AddHours(1).ToString("O"),

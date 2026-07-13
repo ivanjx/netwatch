@@ -20,6 +20,7 @@ builder.Services.Configure<JsonOptions>(options =>
 
 var netWatchOptions = NetWatchOptions.FromConfiguration(builder.Configuration);
 builder.Services.AddSingleton(netWatchOptions);
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(new ApplicationState(DateTimeOffset.UtcNow));
 builder.Services.AddSingleton<SqliteConnectionFactory>();
 builder.Services.AddSingleton<MigrationRunner>();

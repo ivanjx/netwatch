@@ -6,7 +6,10 @@ using NetWatch.Server.Configuration;
 
 namespace NetWatch.Server.Usage;
 
-internal sealed class UsageService(UsageRepository _repository, NetWatchOptions _options)
+internal sealed class UsageService(
+    UsageRepository _repository,
+    NetWatchOptions _options,
+    TimeProvider _timeProvider)
 {
     private static readonly HashSet<string> _categories = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -28,7 +31,7 @@ internal sealed class UsageService(UsageRepository _repository, NetWatchOptions 
             return new InvalidUsageQueryServiceErrorResult();
         }
 
-        var nowUtc = DateTimeOffset.UtcNow;
+        var nowUtc = _timeProvider.GetUtcNow();
         var localNow = TimeZoneInfo.ConvertTime(nowUtc, context!.TimeZone);
         var todayLocal = new DateTime(localNow.Year, localNow.Month, localNow.Day);
         var daysSinceMonday = ((int)localNow.DayOfWeek + 6) % 7;
@@ -69,7 +72,7 @@ internal sealed class UsageService(UsageRepository _repository, NetWatchOptions 
             return new InvalidUsageQueryServiceErrorResult();
         }
 
-        var nowUtc = DateTimeOffset.UtcNow;
+        var nowUtc = _timeProvider.GetUtcNow();
         var localNow = TimeZoneInfo.ConvertTime(nowUtc, context!.TimeZone);
         var defaultFrom = ToUtc(new DateTime(localNow.Year, localNow.Month, localNow.Day), context.TimeZone);
         if (!TryParseInstant(from, defaultFrom, out var fromUtc) ||
@@ -158,4 +161,3 @@ internal sealed class UsageService(UsageRepository _repository, NetWatchOptions 
 
     private sealed record QueryContext(TimeZoneInfo TimeZone, string Category, string? WanInterface);
 }
-
