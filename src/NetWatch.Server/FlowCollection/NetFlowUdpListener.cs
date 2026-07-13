@@ -5,7 +5,10 @@ using NetWatch.Server.Configuration;
 
 namespace NetWatch.Server.FlowCollection;
 
-internal sealed class NetFlowUdpListener(NetWatchOptions _options, ILogger<NetFlowUdpListener> _logger) : BackgroundService
+internal sealed class NetFlowUdpListener(
+    NetWatchOptions _options,
+    NetFlowPacketProcessor _processor,
+    ILogger<NetFlowUdpListener> _logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -26,32 +29,19 @@ internal sealed class NetFlowUdpListener(NetWatchOptions _options, ILogger<NetFl
             {
                 break;
             }
-
-            if (!NetFlowV5Decoder.TryDecode(received.Buffer, out var datagram, out var error))
+            catch (SocketException exception)
             {
                 _logger.LogWarning(
-                    "Rejected NetFlow datagram from {Exporter}: {Error}",
-                    received.RemoteEndPoint,
-                    error);
+                    exception,
+                    "NetFlow receive failed; collection will retry");
+                await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
                 continue;
             }
 
-            foreach (var record in datagram!.Records)
-            {
-                _logger.LogInformation(
-                    "NetFlow v5 exporter={Exporter} sequence={Sequence} source={Source}:{SourcePort} destination={Destination}:{DestinationPort} protocol={Protocol} packets={Packets} bytes={Bytes} input={InputInterface} output={OutputInterface}",
-                    received.RemoteEndPoint,
-                    datagram.FlowSequence,
-                    record.SourceAddress,
-                    record.SourcePort,
-                    record.DestinationAddress,
-                    record.DestinationPort,
-                    record.Protocol,
-                    record.PacketCount,
-                    record.ByteCount,
-                    record.InputInterface,
-                    record.OutputInterface);
-            }
+            await _processor.ProcessAsync(
+                received.RemoteEndPoint.Address,
+                received.Buffer,
+                stoppingToken);
         }
     }
 }

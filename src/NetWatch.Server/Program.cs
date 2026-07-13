@@ -30,8 +30,12 @@ builder.Services.AddSingleton<IMikroTikClient>(services => services.GetRequiredS
 builder.Services.AddSingleton<DeviceRepository>();
 builder.Services.AddSingleton<DeviceService>();
 builder.Services.AddSingleton<DeviceSynchronizationService>();
+builder.Services.AddSingleton<NetFlowChannel>();
+builder.Services.AddSingleton<NetFlowDiagnostics>();
+builder.Services.AddSingleton<NetFlowPacketProcessor>();
 builder.Services.AddHostedService<DhcpSynchronizationWorker>();
 builder.Services.AddHostedService<NetFlowUdpListener>();
+builder.Services.AddHostedService<NetFlowProcessingWorker>();
 builder.Services.AddHealthChecks().AddCheck<SqliteHealthCheck>("sqlite");
 
 var app = builder.Build();
