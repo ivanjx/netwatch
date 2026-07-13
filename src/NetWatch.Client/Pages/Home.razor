@@ -1,11 +1,12 @@
 @page "/"
 @inject HttpClient Http
+@using NetWatch.Core.Diagnostics
 
-<PageTitle>NetWatch Phase 0</PageTitle>
+<PageTitle>NetWatch</PageTitle>
 
 <h1>NetWatch</h1>
 
-<p class="lede">Phase 0 technical spike console</p>
+<p class="lede">Project foundation status</p>
 
 @if (status is null)
 {
@@ -15,55 +16,23 @@ else
 {
     <dl>
         <dt>Database</dt>
-        <dd><code>@status.DatabasePath</code></dd>
+        <dd>@status.Database</dd>
+        <dt>Schema version</dt>
+        <dd>@status.SchemaVersion</dd>
         <dt>NetFlow listener</dt>
         <dd><code>@status.NetFlowEndpoint/udp</code></dd>
         <dt>MikroTik configured</dt>
         <dd>@(status.MikroTikConfigured ? "Yes" : "No")</dd>
+        <dt>Reporting timezone</dt>
+        <dd>@status.ReportingTimezone</dd>
     </dl>
 }
 
-<button class="primary-button" @onclick="RunSqliteProbe" disabled="@sqliteProbeRunning">
-    Test persistent SQLite write
-</button>
-
-@if (sqliteResult is not null)
-{
-    <p class="success-message">
-        Persisted write count: <strong>@sqliteResult.WriteCount</strong>
-    </p>
-}
-
 @code {
-    private SpikeStatus? status;
-    private SqliteResult? sqliteResult;
-    private bool sqliteProbeRunning;
+    private SystemStatusResponse? status;
 
     protected override async Task OnInitializedAsync()
     {
-        status = await Http.GetFromJsonAsync<SpikeStatus>("api/spikes/status");
+        status = await Http.GetFromJsonAsync<SystemStatusResponse>("api/status");
     }
-
-    private async Task RunSqliteProbe()
-    {
-        sqliteProbeRunning = true;
-        try
-        {
-            using var response = await Http.PostAsync("api/spikes/sqlite", null);
-            response.EnsureSuccessStatusCode();
-            sqliteResult = await response.Content.ReadFromJsonAsync<SqliteResult>();
-        }
-        finally
-        {
-            sqliteProbeRunning = false;
-        }
-    }
-
-    private sealed record SpikeStatus(
-        string Product,
-        string DatabasePath,
-        string NetFlowEndpoint,
-        bool MikroTikConfigured);
-
-    private sealed record SqliteResult(long WriteCount, DateTimeOffset UpdatedAtUtc, string DatabasePath);
 }

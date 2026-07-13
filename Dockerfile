@@ -10,6 +10,7 @@ RUN dotnet publish src/NetWatch.Server/NetWatch.Server.csproj \
     --configuration Release \
     --runtime linux-x64 \
     --self-contained true \
+    --warnaserror \
     --output /app/publish
 
 

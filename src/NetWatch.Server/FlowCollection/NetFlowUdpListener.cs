@@ -5,14 +5,14 @@ using NetWatch.Server.Configuration;
 
 namespace NetWatch.Server.FlowCollection;
 
-internal sealed class NetFlowUdpListener(SpikeOptions options, ILogger<NetFlowUdpListener> logger) : BackgroundService
+internal sealed class NetFlowUdpListener(NetWatchOptions options, ILogger<NetFlowUdpListener> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var socket = new UdpClient(new IPEndPoint(options.NetFlowListenAddress, options.NetFlowListenPort));
+        using var socket = new UdpClient(new IPEndPoint(IPAddress.Any, options.NetFlowListenPort));
         logger.LogInformation(
-            "Phase 0 NetFlow listener is ready on {ListenAddress}:{ListenPort}/udp",
-            options.NetFlowListenAddress,
+            "NetFlow listener is ready on {ListenAddress}:{ListenPort}/udp",
+            IPAddress.Any,
             options.NetFlowListenPort);
 
         while (!stoppingToken.IsCancellationRequested)

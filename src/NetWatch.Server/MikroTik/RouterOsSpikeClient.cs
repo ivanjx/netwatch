@@ -8,11 +8,11 @@ namespace NetWatch.Server.MikroTik;
 
 internal sealed class RouterOsSpikeClient : IDisposable
 {
-    private readonly SpikeOptions options;
+    private readonly NetWatchOptions options;
     private readonly ILogger<RouterOsSpikeClient> logger;
     private readonly HttpClient httpClient;
 
-    public RouterOsSpikeClient(SpikeOptions options, ILogger<RouterOsSpikeClient> logger)
+    public RouterOsSpikeClient(NetWatchOptions options, ILogger<RouterOsSpikeClient> logger)
     {
         this.options = options;
         this.logger = logger;
@@ -109,7 +109,7 @@ internal sealed class RouterOsSpikeClient : IDisposable
         }
 
         var requestPayload = JsonSerializer.Serialize(
-            new TorchRequest(options.TorchInterface, "1s", string.Empty),
+            new TorchRequest(options.MikroTikInterface, "1s", string.Empty),
             NetWatch.Server.Serialization.NetWatchJsonContext.Default.TorchRequest);
         using var content = new StringContent(requestPayload, Encoding.UTF8, "application/json");
 

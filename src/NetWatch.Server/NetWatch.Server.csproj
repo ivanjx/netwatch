@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NetWatch.Client\NetWatch.Client.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\NetWatch.Core\NetWatch.Core.csproj" />
   </ItemGroup>
 
 </Project>

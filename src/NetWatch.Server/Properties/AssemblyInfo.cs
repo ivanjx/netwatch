@@ -1,3 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("NetWatch.Server.Tests")]
+[assembly: InternalsVisibleTo("NetWatch.IntegrationTests")]

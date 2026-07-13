@@ -6,9 +6,10 @@
   </Configurations>
   <Folder Name="/src/">
     <Project Path="src/NetWatch.Client/NetWatch.Client.csproj" />
+    <Project Path="src/NetWatch.Core/NetWatch.Core.csproj" />
     <Project Path="src/NetWatch.Server/NetWatch.Server.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/NetWatch.Server.Tests/NetWatch.Server.Tests.csproj" />
+    <Project Path="tests/NetWatch.IntegrationTests/NetWatch.IntegrationTests.csproj" />
   </Folder>
 </Solution>
