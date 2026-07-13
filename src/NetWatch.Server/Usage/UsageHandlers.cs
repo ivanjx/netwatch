@@ -1,0 +1,42 @@
+using NetWatch.Server.Common;
+
+namespace NetWatch.Server.Usage;
+
+internal static class UsageHandlers
+{
+    public static async Task<IResult> GetSummaryAsync(
+        HttpRequest request,
+        UsageService service,
+        CancellationToken cancellationToken) =>
+        Map(await service.GetSummaryAsync(
+            request.Query["timezone"],
+            request.Query["category"],
+            request.Query["wanInterface"],
+            cancellationToken));
+
+    public static async Task<IResult> GetDevicesAsync(
+        HttpRequest request,
+        UsageService service,
+        CancellationToken cancellationToken) =>
+        Map(await service.GetDevicesAsync(
+            request.Query["from"],
+            request.Query["to"],
+            request.Query["timezone"],
+            request.Query["category"],
+            request.Query["wanInterface"],
+            cancellationToken));
+
+    private static IResult Map(ServiceResult result) => result switch
+    {
+        UsageSummaryResult success => Results.Ok(success.Value),
+        DeviceUsageListResult success => Results.Ok(success.Value),
+        InvalidUsageQueryServiceErrorResult => Results.Problem(
+            statusCode: StatusCodes.Status400BadRequest),
+        UsageUnavailableServiceErrorResult => Results.Problem(
+            statusCode: StatusCodes.Status503ServiceUnavailable),
+        ErrorServiceResult => Results.Problem(
+            statusCode: StatusCodes.Status500InternalServerError),
+        _ => Results.StatusCode(StatusCodes.Status500InternalServerError)
+    };
+}
+

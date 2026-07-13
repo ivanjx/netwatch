@@ -28,7 +28,7 @@ internal sealed record NetWatchOptions(
 
         var netFlowListenPort = ParseInteger(configuration, "NETFLOW_LISTEN_PORT", 2055, 1, 65_535);
         var baseUrl = ParseBaseUrl(configuration["MIKROTIK_BASE_URL"]);
-        var reportingTimeZone = ParseTimeZone(configuration["TZ"] ?? "Asia/Jakarta");
+        var reportingTimeZone = ParseTimeZone(configuration["TZ"] ?? TimeZoneInfo.Utc.Id);
 
         return new NetWatchOptions(
             netFlowListenPort,

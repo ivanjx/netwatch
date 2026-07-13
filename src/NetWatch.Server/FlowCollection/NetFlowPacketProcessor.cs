@@ -13,7 +13,7 @@ internal sealed class NetFlowPacketProcessor(
     private const uint UptimeWrapWindowMilliseconds = 86_400_000;
 
     private readonly Dictionary<IPAddress, ExporterState> _exporterStates = [];
-    private readonly object _stateLock = new();
+    private readonly Lock _stateLock = new();
 
     public async ValueTask ProcessAsync(
         IPAddress exporterAddress,
@@ -44,6 +44,10 @@ internal sealed class NetFlowPacketProcessor(
         }
 
         MonitorExporter(exporterAddress, decoded);
+        _diagnostics.RecordExporterState(
+            exporterAddress.ToString(),
+            decoded.SystemUptimeMilliseconds,
+            decoded.FlowSequence);
         _diagnostics.RecordDecodedFlows(decoded.Records.Count);
 
         foreach (var record in decoded.Records)

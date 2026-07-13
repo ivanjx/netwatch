@@ -63,6 +63,52 @@ internal sealed class MigrationRunner(SqliteConnectionFactory _connectionFactory
                 detected_at_utc TEXT NOT NULL,
                 last_dhcp_sync_at_utc TEXT NULL
             );
+
+            CREATE TABLE usage_hourly (
+                device_id TEXT NOT NULL REFERENCES devices(id),
+                hour_start_utc TEXT NOT NULL,
+                category TEXT NOT NULL,
+                wan_interface TEXT NOT NULL,
+                upload_bytes INTEGER NOT NULL,
+                download_bytes INTEGER NOT NULL,
+                upload_packets INTEGER NOT NULL,
+                download_packets INTEGER NOT NULL,
+                PRIMARY KEY (device_id, hour_start_utc, category, wan_interface)
+            );
+
+            CREATE INDEX ix_usage_hourly_time
+                ON usage_hourly(hour_start_utc, category, wan_interface);
+
+            CREATE TABLE unresolved_usage (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ip_address TEXT NOT NULL,
+                hour_start_utc TEXT NOT NULL,
+                first_seen_at_utc TEXT NOT NULL,
+                last_seen_at_utc TEXT NOT NULL,
+                category TEXT NOT NULL,
+                wan_interface TEXT NOT NULL,
+                upload_bytes INTEGER NOT NULL,
+                download_bytes INTEGER NOT NULL,
+                upload_packets INTEGER NOT NULL,
+                download_packets INTEGER NOT NULL,
+                UNIQUE (ip_address, hour_start_utc, category, wan_interface)
+            );
+
+            CREATE INDEX ix_unresolved_usage_address_time
+                ON unresolved_usage(ip_address, last_seen_at_utc);
+
+            CREATE TABLE collector_state (
+                singleton_id INTEGER PRIMARY KEY CHECK (singleton_id = 1),
+                schema_version INTEGER NOT NULL,
+                exporter_address TEXT NULL,
+                router_uptime_milliseconds INTEGER NULL,
+                netflow_sequence INTEGER NULL,
+                last_flow_at_utc TEXT NULL,
+                last_flush_at_utc TEXT NULL,
+                last_reconciliation_at_utc TEXT NULL
+            );
+
+            INSERT INTO collector_state (singleton_id, schema_version) VALUES (1, 2);
             """)
     ];
 

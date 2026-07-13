@@ -2,6 +2,7 @@ using System.Net;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 
 using NetWatch.Core.Diagnostics;
@@ -13,6 +14,16 @@ namespace NetWatch.IntegrationTests.Health;
 
 public sealed class SystemStatusWorkflowTests
 {
+    [Fact]
+    public void FromConfiguration_DefaultsReportingTimeZoneToUtc()
+    {
+        var configuration = new ConfigurationBuilder().Build();
+
+        var options = NetWatchOptions.FromConfiguration(configuration);
+
+        Assert.Equal(TimeZoneInfo.Utc, options.ReportingTimeZone);
+    }
+
     [Fact]
     public async Task GetAsync_UsesInitializedDatabaseThroughAllResultBoundaries()
     {
@@ -66,7 +77,7 @@ public sealed class SystemStatusWorkflowTests
             "all",
             [],
             [],
-            TimeZoneInfo.FindSystemTimeZoneById("Asia/Jakarta"),
+            TimeZoneInfo.FindSystemTimeZoneById("America/New_York"),
             TimeSpan.FromSeconds(30),
             TimeSpan.FromSeconds(5),
             TimeSpan.FromSeconds(2),

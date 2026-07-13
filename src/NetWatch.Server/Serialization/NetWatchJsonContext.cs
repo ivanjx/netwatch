@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 using NetWatch.Core.Diagnostics;
 using NetWatch.Core.Devices;
+using NetWatch.Core.Usage;
 using NetWatch.Server.MikroTik;
 
 namespace NetWatch.Server.Serialization;
@@ -19,4 +20,10 @@ namespace NetWatch.Server.Serialization;
 [JsonSerializable(typeof(RouterSystemResourceDto))]
 [JsonSerializable(typeof(IReadOnlyList<RouterSystemResourceDto>))]
 [JsonSerializable(typeof(IReadOnlyList<RouterDhcpLeaseDto>))]
+[JsonSerializable(typeof(CollectorDiagnosticsResponse))]
+[JsonSerializable(typeof(UsageTotalsResponse))]
+[JsonSerializable(typeof(UsagePeriodResponse))]
+[JsonSerializable(typeof(UsageSummaryResponse))]
+[JsonSerializable(typeof(DeviceUsageResponse))]
+[JsonSerializable(typeof(IReadOnlyList<DeviceUsageResponse>))]
 internal sealed partial class NetWatchJsonContext : JsonSerializerContext;

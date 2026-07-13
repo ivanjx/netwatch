@@ -7,6 +7,7 @@ using NetWatch.Server.FlowCollection;
 using NetWatch.Server.Health;
 using NetWatch.Server.MikroTik;
 using NetWatch.Server.Serialization;
+using NetWatch.Server.Usage;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 builder.WebHost.ConfigureKestrel(options => options.ListenAnyIP(8080));
@@ -33,6 +34,12 @@ builder.Services.AddSingleton<DeviceSynchronizationService>();
 builder.Services.AddSingleton<NetFlowChannel>();
 builder.Services.AddSingleton<NetFlowDiagnostics>();
 builder.Services.AddSingleton<NetFlowPacketProcessor>();
+builder.Services.AddSingleton<UsageRepository>();
+builder.Services.AddSingleton<DeviceAttributionService>();
+builder.Services.AddSingleton<UsageAccumulator>();
+builder.Services.AddSingleton<UnresolvedUsageReconciler>();
+builder.Services.AddSingleton<UsageService>();
+builder.Services.AddSingleton<CollectorDiagnosticsService>();
 builder.Services.AddHostedService<DhcpSynchronizationWorker>();
 builder.Services.AddHostedService<NetFlowUdpListener>();
 builder.Services.AddHostedService<NetFlowProcessingWorker>();
@@ -47,10 +54,13 @@ app.UseStaticFiles();
 
 app.MapHealthChecks("/api/health");
 app.MapGet("/api/status", SystemStatusHandler.GetAsync);
+app.MapGet("/api/diagnostics", CollectorDiagnosticsHandler.GetAsync);
 app.MapGet("/api/devices", DeviceHandlers.ListAsync);
 app.MapGet("/api/devices/{id}", DeviceHandlers.GetAsync);
 app.MapPatch("/api/devices/{id}", DeviceHandlers.RenameAsync);
 app.MapPost("/api/devices/manual", DeviceHandlers.CreateManualAsync);
+app.MapGet("/api/usage/summary", UsageHandlers.GetSummaryAsync);
+app.MapGet("/api/usage/devices", UsageHandlers.GetDevicesAsync);
 
 app.MapFallbackToFile("index.html");
 
