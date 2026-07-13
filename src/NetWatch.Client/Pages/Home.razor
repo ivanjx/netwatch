@@ -1,5 +1,5 @@
 @page "/"
-@inject HttpClient Http
+@inject HttpClient _http
 @using NetWatch.Core.Diagnostics
 
 <PageTitle>NetWatch</PageTitle>
@@ -8,7 +8,7 @@
 
 <p class="lede">Project foundation status</p>
 
-@if (status is null)
+@if (_status is null)
 {
     <p>Loading API status…</p>
 }
@@ -16,23 +16,23 @@ else
 {
     <dl>
         <dt>Database</dt>
-        <dd>@status.Database</dd>
+        <dd>@_status.Database</dd>
         <dt>Schema version</dt>
-        <dd>@status.SchemaVersion</dd>
+        <dd>@_status.SchemaVersion</dd>
         <dt>NetFlow listener</dt>
-        <dd><code>@status.NetFlowEndpoint/udp</code></dd>
+        <dd><code>@_status.NetFlowEndpoint/udp</code></dd>
         <dt>MikroTik configured</dt>
-        <dd>@(status.MikroTikConfigured ? "Yes" : "No")</dd>
+        <dd>@(_status.MikroTikConfigured ? "Yes" : "No")</dd>
         <dt>Reporting timezone</dt>
-        <dd>@status.ReportingTimezone</dd>
+        <dd>@_status.ReportingTimezone</dd>
     </dl>
 }
 
 @code {
-    private SystemStatusResponse? status;
+    private SystemStatusResponse? _status;
 
     protected override async Task OnInitializedAsync()
     {
-        status = await Http.GetFromJsonAsync<SystemStatusResponse>("api/status");
+        _status = await _http.GetFromJsonAsync<SystemStatusResponse>("api/status");
     }
 }

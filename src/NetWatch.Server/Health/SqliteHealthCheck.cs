@@ -4,7 +4,7 @@ using NetWatch.Server.Data;
 
 namespace NetWatch.Server.Health;
 
-internal sealed class SqliteHealthCheck(SqliteConnectionFactory connectionFactory) : IHealthCheck
+internal sealed class SqliteHealthCheck(SqliteConnectionFactory _connectionFactory) : IHealthCheck
 {
     public async Task<HealthCheckResult> CheckHealthAsync(
         HealthCheckContext context,
@@ -12,7 +12,7 @@ internal sealed class SqliteHealthCheck(SqliteConnectionFactory connectionFactor
     {
         try
         {
-            await using var connection = await connectionFactory.OpenConnectionAsync(cancellationToken);
+            await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
             await using var command = connection.CreateCommand();
             command.CommandText = "SELECT 1 FROM schema_migrations LIMIT 1;";
             await command.ExecuteScalarAsync(cancellationToken);

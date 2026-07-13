@@ -1,0 +1,131 @@
+.lede {
+    color: #4c5d6b;
+}
+
+.manual-device {
+    background: #f4f7f9;
+    border: 1px solid #d7e0e7;
+    border-radius: 0.5rem;
+    margin: 2rem 0;
+    padding: 1.25rem;
+}
+
+.manual-device h2,
+.device-card h2 {
+    margin-top: 0;
+}
+
+.form-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-bottom: 1rem;
+}
+
+label {
+    display: grid;
+    font-weight: 600;
+    gap: 0.35rem;
+}
+
+.notes {
+    grid-column: 1 / -1;
+}
+
+input,
+textarea {
+    border: 1px solid #9caeba;
+    border-radius: 0.3rem;
+    font: inherit;
+    padding: 0.55rem;
+}
+
+textarea {
+    min-height: 4rem;
+}
+
+.primary-button {
+    background: #1769aa;
+    border: 1px solid #145b93;
+    border-radius: 0.3rem;
+    color: #fff;
+    cursor: pointer;
+    font: inherit;
+    padding: 0.6rem 1rem;
+}
+
+.device-list {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.device-card {
+    align-items: center;
+    border: 1px solid #d7e0e7;
+    border-radius: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+}
+
+.device-card h2 {
+    display: inline;
+    font-size: 1.1rem;
+    margin-right: 0.75rem;
+}
+
+.device-card p {
+    color: #4c5d6b;
+    margin: 0.45rem 0 0;
+}
+
+.device-state {
+    display: grid;
+    gap: 0.35rem;
+    justify-items: end;
+}
+
+.online {
+    color: #18733a;
+}
+
+.offline {
+    color: #697985;
+}
+
+.link-button {
+    background: none;
+    border: 0;
+    color: #1769aa;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+}
+
+.error-message {
+    background: #fff0f0;
+    border: 1px solid #dcaaaa;
+    color: #7d2020;
+    padding: 0.75rem 1rem;
+}
+
+.empty-state {
+    color: #4c5d6b;
+    padding: 2rem 0;
+}
+
+@media (max-width: 640px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .device-card {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .device-state {
+        justify-items: start;
+    }
+}

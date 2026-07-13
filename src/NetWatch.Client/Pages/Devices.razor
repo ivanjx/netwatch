@@ -1,0 +1,232 @@
+@page "/devices"
+@inject HttpClient _http
+@using System.Net
+@using System.Net.Http.Json
+@using NetWatch.Core.Devices
+
+<PageTitle>Devices — NetWatch</PageTitle>
+
+<h1>Devices</h1>
+<p class="lede">DHCP clients discovered from RouterOS and devices you add manually.</p>
+
+@if (_error is not null)
+{
+    <p class="error-message" role="alert">@_error</p>
+}
+
+<section class="manual-device">
+    <h2>Add a manual device</h2>
+    <div class="form-grid">
+        <label>Name <input @bind="_manualName" maxlength="100" /></label>
+        <label>IP address or subnet <input @bind="_manualAddress" placeholder="192.168.88.10 or 192.168.90.0/24" /></label>
+        <label>MAC address <input @bind="_manualMac" placeholder="AA:BB:CC:DD:EE:FF" /></label>
+        <label>Type <input @bind="_manualType" maxlength="50" /></label>
+        <label class="notes">Notes <textarea @bind="_manualNotes" maxlength="2000"></textarea></label>
+    </div>
+    <button class="primary-button" disabled="@_saving" @onclick="CreateManualAsync">Add device</button>
+</section>
+
+@if (_devices is null)
+{
+    <p>Loading devices…</p>
+}
+else if (_devices.Count == 0)
+{
+    <p class="empty-state">No devices yet. Active DHCP leases will appear after the next router synchronization.</p>
+}
+else
+{
+    <div class="device-list">
+        @foreach (var device in _devices)
+        {
+            <article class="device-card" @key="device.Id">
+                <div>
+                    @if (_editingId == device.Id)
+                    {
+                        <input aria-label="Friendly name" @bind="_editName" maxlength="100" />
+                        <button disabled="@_saving" @onclick="() => RenameAsync(device.Id)">Save</button>
+                        <button disabled="@_saving" @onclick="CancelRename">Cancel</button>
+                    }
+                    else
+                    {
+                        <h2>@device.DisplayName</h2>
+                        <button class="link-button" @onclick="() => BeginRename(device)">Rename</button>
+                    }
+                    <p>@(device.CurrentIpAddress ?? "No current IP") · @(device.MacAddress ?? "No MAC")</p>
+                </div>
+                <div class="device-state">
+                    <span class="@(device.IsOnline ? "online" : "offline")">@(device.IsOnline ? "Online" : "Offline")</span>
+                    <span>@(device.IsManual ? "Manual" : "DHCP")</span>
+                </div>
+            </article>
+        }
+    </div>
+}
+
+@code {
+    private List<DeviceSummaryResponse>? _devices;
+    private string? _error;
+    private string? _editingId;
+    private string? _editName;
+    private string _manualName = string.Empty;
+    private string _manualAddress = string.Empty;
+    private string _manualMac = string.Empty;
+    private string _manualType = "Client";
+    private string _manualNotes = string.Empty;
+    private bool _saving;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _devices = await _http.GetFromJsonAsync<List<DeviceSummaryResponse>>("api/devices") ?? [];
+            _error = null;
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Device data could not be loaded.";
+        }
+    }
+
+    private void BeginRename(DeviceSummaryResponse device)
+    {
+        _editingId = device.Id;
+        _editName = device.FriendlyName ?? device.DisplayName;
+    }
+
+    private void CancelRename()
+    {
+        _editingId = null;
+        _editName = null;
+    }
+
+    private async Task RenameAsync(string id)
+    {
+        if (_editName?.Trim().Length > 100)
+        {
+            _error = "Friendly names cannot exceed 100 characters.";
+            return;
+        }
+
+        _saving = true;
+        _error = null;
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Patch, $"api/devices/{id}")
+            {
+                Content = JsonContent.Create(new RenameDeviceRequest(_editName))
+            };
+            using var response = await _http.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                _error = "The friendly name could not be saved.";
+                return;
+            }
+
+            CancelRename();
+            await LoadAsync();
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task CreateManualAsync()
+    {
+        if (!ValidateManualDevice())
+        {
+            return;
+        }
+
+        _saving = true;
+        _error = null;
+        try
+        {
+            using var response = await _http.PostAsJsonAsync(
+                "api/devices/manual",
+                new CreateManualDeviceRequest(_manualName, _manualAddress, _manualMac, _manualType, _manualNotes));
+            if (!response.IsSuccessStatusCode)
+            {
+                _error = "Check the manual device values and try again.";
+                return;
+            }
+
+            _manualName = string.Empty;
+            _manualAddress = string.Empty;
+            _manualMac = string.Empty;
+            _manualType = "Client";
+            _manualNotes = string.Empty;
+            await LoadAsync();
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private bool ValidateManualDevice()
+    {
+        var name = _manualName.Trim();
+        if (name.Length is 0 or > 100)
+        {
+            _error = "A name of at most 100 characters is required.";
+            return false;
+        }
+
+        var address = _manualAddress.Trim();
+        if (address.Length > 0 &&
+            !IPAddress.TryParse(address, out _) &&
+            !IPNetwork.TryParse(address, out _))
+        {
+            _error = "Enter a valid IP address or subnet.";
+            return false;
+        }
+
+        if (!IsValidMacAddress(_manualMac))
+        {
+            _error = "Enter a valid MAC address.";
+            return false;
+        }
+
+        if (_manualType.Trim().Length > 50)
+        {
+            _error = "Device types cannot exceed 50 characters.";
+            return false;
+        }
+
+        if (_manualNotes.Length > 2_000)
+        {
+            _error = "Notes cannot exceed 2,000 characters.";
+            return false;
+        }
+
+        _error = null;
+        return true;
+    }
+
+    private static bool IsValidMacAddress(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return true;
+        }
+
+        var hexDigitCount = 0;
+        foreach (var character in value)
+        {
+            if (Uri.IsHexDigit(character))
+            {
+                hexDigitCount++;
+            }
+            else if (character is not ':' and not '-' and not '.')
+            {
+                return false;
+            }
+        }
+
+        return hexDigitCount == 12;
+    }
+}

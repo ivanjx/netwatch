@@ -5,10 +5,8 @@ namespace NetWatch.Server.Health;
 
 internal sealed record DatabaseStatus(long SchemaVersion);
 
-internal sealed record DatabaseUnavailableRepositoryErrorResult(string Detail) :
-    ErrorRepositoryResult("database_unavailable", "The database status could not be read.");
+internal sealed record DatabaseUnavailableRepositoryErrorResult : ErrorRepositoryResult;
 
 internal sealed record SystemStatusResult(SystemStatusResponse Value) : SuccessServiceResult;
 
-internal sealed record SystemStatusUnavailableServiceErrorResult(string Detail) :
-    ErrorServiceResult("status_unavailable", "NetWatch status is temporarily unavailable.");
+internal sealed record SystemStatusUnavailableServiceErrorResult : ErrorServiceResult;

@@ -23,6 +23,22 @@ header span {
     font-size: 0.9rem;
 }
 
+nav {
+    display: flex;
+    gap: 1rem;
+    margin-left: auto;
+}
+
+nav a {
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+nav a.active {
+    text-decoration: underline;
+    text-underline-offset: 0.35rem;
+}
+
 .content {
     margin: 0 auto;
     max-width: 64rem;
@@ -35,6 +51,10 @@ header span {
         flex-direction: column;
         gap: 0.25rem;
         padding: 1rem;
+    }
+
+    nav {
+        margin-left: 0;
     }
 
     .content {

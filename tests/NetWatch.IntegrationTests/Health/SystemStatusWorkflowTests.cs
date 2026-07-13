@@ -42,7 +42,7 @@ public sealed class SystemStatusWorkflowTests
             var httpResult = Assert.IsAssignableFrom<IValueHttpResult>(result);
             var response = Assert.IsType<SystemStatusResponse>(httpResult.Value);
             Assert.Equal("Healthy", response.State);
-            Assert.Equal(1, response.SchemaVersion);
+            Assert.Equal(2, response.SchemaVersion);
             Assert.Equal(DateTimeOffset.UnixEpoch, response.StartedAtUtc);
         }
         finally

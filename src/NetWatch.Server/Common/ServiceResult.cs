@@ -4,4 +4,4 @@ internal abstract record ServiceResult;
 
 internal abstract record SuccessServiceResult : ServiceResult;
 
-internal abstract record ErrorServiceResult(string Code, string Message) : ServiceResult;
+internal abstract record ErrorServiceResult : ServiceResult;

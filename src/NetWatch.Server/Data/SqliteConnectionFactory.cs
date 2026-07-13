@@ -4,7 +4,7 @@ namespace NetWatch.Server.Data;
 
 internal sealed class SqliteConnectionFactory
 {
-    private readonly string connectionString;
+    private readonly string _connectionString;
 
     public SqliteConnectionFactory()
         : this(FixedDatabasePath)
@@ -14,7 +14,7 @@ internal sealed class SqliteConnectionFactory
     internal SqliteConnectionFactory(string databasePath)
     {
         DatabasePath = databasePath;
-        connectionString = new SqliteConnectionStringBuilder
+        _connectionString = new SqliteConnectionStringBuilder
         {
             DataSource = databasePath,
             Mode = SqliteOpenMode.ReadWriteCreate,
@@ -28,7 +28,7 @@ internal sealed class SqliteConnectionFactory
 
     public async Task<SqliteConnection> OpenConnectionAsync(CancellationToken cancellationToken)
     {
-        var connection = new SqliteConnection(connectionString);
+        var connection = new SqliteConnection(_connectionString);
         try
         {
             await connection.OpenAsync(cancellationToken);

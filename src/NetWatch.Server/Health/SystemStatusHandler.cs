@@ -12,15 +12,10 @@ internal static class SystemStatusHandler
         return result switch
         {
             SystemStatusResult success => Results.Ok(success.Value),
-            SystemStatusUnavailableServiceErrorResult error => Results.Problem(
-                title: error.Message,
-                detail: error.Detail,
-                statusCode: StatusCodes.Status503ServiceUnavailable,
-                extensions: new Dictionary<string, object?> { ["code"] = error.Code }),
-            ErrorServiceResult error => Results.Problem(
-                title: error.Message,
-                statusCode: StatusCodes.Status500InternalServerError,
-                extensions: new Dictionary<string, object?> { ["code"] = error.Code }),
+            SystemStatusUnavailableServiceErrorResult => Results.Problem(
+                statusCode: StatusCodes.Status503ServiceUnavailable),
+            ErrorServiceResult => Results.Problem(
+                statusCode: StatusCodes.Status500InternalServerError),
             _ => Results.StatusCode(StatusCodes.Status500InternalServerError)
         };
     }

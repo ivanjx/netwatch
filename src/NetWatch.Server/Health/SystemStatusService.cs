@@ -7,13 +7,13 @@ using NetWatch.Server.Configuration;
 namespace NetWatch.Server.Health;
 
 internal sealed class SystemStatusService(
-    SystemStatusRepository repository,
-    NetWatchOptions options,
-    ApplicationState applicationState)
+    SystemStatusRepository _repository,
+    NetWatchOptions _options,
+    ApplicationState _applicationState)
 {
     public async Task<ServiceResult> GetAsync(CancellationToken cancellationToken)
     {
-        var result = await repository.GetAsync(cancellationToken);
+        var result = await _repository.GetAsync(cancellationToken);
         return result switch
         {
             RepositoryResult<DatabaseStatus> success => new SystemStatusResult(
@@ -22,13 +22,12 @@ internal sealed class SystemStatusService(
                     "Healthy",
                     "Ready",
                     success.Value.SchemaVersion,
-                    $"{IPAddress.Any}:{options.NetFlowListenPort}",
-                    options.MikroTikBaseUrl is not null,
-                    options.ReportingTimeZone.Id,
-                    applicationState.StartedAtUtc)),
-            DatabaseUnavailableRepositoryErrorResult error =>
-                new SystemStatusUnavailableServiceErrorResult(error.Detail),
-            _ => new SystemStatusUnavailableServiceErrorResult("Unexpected repository result.")
+                    $"{IPAddress.Any}:{_options.NetFlowListenPort}",
+                    _options.MikroTikBaseUrl is not null,
+                    _options.ReportingTimeZone.Id,
+                    _applicationState.StartedAtUtc)),
+            DatabaseUnavailableRepositoryErrorResult => new SystemStatusUnavailableServiceErrorResult(),
+            _ => new SystemStatusUnavailableServiceErrorResult()
         };
     }
 }

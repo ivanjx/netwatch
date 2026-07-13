@@ -2,9 +2,9 @@ using Microsoft.Data.Sqlite;
 
 namespace NetWatch.Server.Data;
 
-internal sealed class MigrationRunner(SqliteConnectionFactory connectionFactory, ILogger<MigrationRunner> logger)
+internal sealed class MigrationRunner(SqliteConnectionFactory _connectionFactory, ILogger<MigrationRunner> _logger)
 {
-    private static readonly Migration[] Migrations =
+    private static readonly Migration[] _migrations =
     [
         new(
             1,
@@ -15,12 +15,60 @@ internal sealed class MigrationRunner(SqliteConnectionFactory connectionFactory,
                 value TEXT NOT NULL,
                 updated_at_utc TEXT NOT NULL
             );
+            """),
+        new(
+            2,
+            "device-discovery",
+            """
+            CREATE TABLE devices (
+                id TEXT PRIMARY KEY,
+                mac_address TEXT NULL UNIQUE,
+                friendly_name TEXT NULL,
+                discovered_name TEXT NULL,
+                type TEXT NOT NULL,
+                notes TEXT NULL,
+                is_manual INTEGER NOT NULL,
+                is_online INTEGER NOT NULL,
+                current_ip_address TEXT NULL,
+                dhcp_status TEXT NULL,
+                dhcp_dynamic INTEGER NULL,
+                dhcp_server TEXT NULL,
+                dhcp_comment TEXT NULL,
+                last_seen TEXT NULL,
+                created_at_utc TEXT NOT NULL,
+                updated_at_utc TEXT NOT NULL,
+                archived_at_utc TEXT NULL
+            );
+
+            CREATE TABLE ip_assignments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                device_id TEXT NOT NULL REFERENCES devices(id),
+                ip_address TEXT NOT NULL,
+                source TEXT NOT NULL,
+                valid_from_utc TEXT NOT NULL,
+                valid_to_utc TEXT NULL
+            );
+
+            CREATE INDEX ix_ip_assignments_ip_time
+                ON ip_assignments(ip_address, valid_from_utc, valid_to_utc);
+            CREATE INDEX ix_ip_assignments_device_time
+                ON ip_assignments(device_id, valid_from_utc DESC);
+            CREATE UNIQUE INDEX ux_ip_assignments_open_device_ip
+                ON ip_assignments(device_id, ip_address) WHERE valid_to_utc IS NULL;
+
+            CREATE TABLE router_state (
+                singleton_id INTEGER PRIMARY KEY CHECK (singleton_id = 1),
+                router_os_version TEXT NOT NULL,
+                is_supported INTEGER NOT NULL,
+                detected_at_utc TEXT NOT NULL,
+                last_dhcp_sync_at_utc TEXT NULL
+            );
             """)
     ];
 
     public async Task RunAsync(CancellationToken cancellationToken)
     {
-        await using var connection = await connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         await using (var pragmas = connection.CreateCommand())
         {
@@ -41,7 +89,7 @@ internal sealed class MigrationRunner(SqliteConnectionFactory connectionFactory,
             await initialize.ExecuteNonQueryAsync(cancellationToken);
         }
 
-        foreach (var migration in Migrations)
+        foreach (var migration in _migrations)
         {
             if (await IsAppliedAsync(connection, migration.Version, cancellationToken))
             {
@@ -49,7 +97,7 @@ internal sealed class MigrationRunner(SqliteConnectionFactory connectionFactory,
             }
 
             await ApplyAsync(connection, migration, cancellationToken);
-            logger.LogInformation(
+            _logger.LogInformation(
                 "Applied database migration {MigrationVersion} {MigrationName}",
                 migration.Version,
                 migration.Name);
