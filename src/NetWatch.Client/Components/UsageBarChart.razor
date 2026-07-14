@@ -1,0 +1,43 @@
+@using NetWatch.Core.Usage
+
+<div class="usage-chart" role="img" aria-label="Download and upload usage over time">
+    <div class="chart-legend" aria-hidden="true">
+        <span><i class="download-key"></i>Download</span>
+        <span><i class="upload-key"></i>Upload</span>
+    </div>
+    @if (Points.Count == 0)
+    {
+        <div class="chart-empty">
+            <strong>No usage recorded</strong>
+            <span>Traffic will appear here after NetFlow data is collected.</span>
+        </div>
+    }
+    else
+    {
+        <div class="plot">
+            @foreach (var point in Points)
+            {
+                <div class="bar-group" title="@Title(point)">
+                    <div class="bars">
+                        <span class="bar download" style="height: @Height(point.Totals.DownloadBytes)%"></span>
+                        <span class="bar upload" style="height: @Height(point.Totals.UploadBytes)%"></span>
+                    </div>
+                    <span class="bar-label">@point.Label</span>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<UsageHistoryPointResponse> Points { get; set; } = [];
+
+    private long Maximum => Points.Count == 0 ? 1 : Math.Max(
+        1,
+        Points.Max(point => Math.Max(point.Totals.DownloadBytes, point.Totals.UploadBytes)));
+
+    private double Height(long value) => value == 0 ? 0 : Math.Max(3, value * 100d / Maximum);
+
+    private static string Title(UsageHistoryPointResponse point) =>
+        $"{point.Label}: {UsageFormatting.Bytes(point.Totals.DownloadBytes)} downloaded, {UsageFormatting.Bytes(point.Totals.UploadBytes)} uploaded";
+}

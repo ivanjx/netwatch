@@ -26,4 +26,7 @@ namespace NetWatch.Server.Serialization;
 [JsonSerializable(typeof(UsageSummaryResponse))]
 [JsonSerializable(typeof(DeviceUsageResponse))]
 [JsonSerializable(typeof(IReadOnlyList<DeviceUsageResponse>))]
+[JsonSerializable(typeof(UsageHistoryPointResponse))]
+[JsonSerializable(typeof(IReadOnlyList<UsageHistoryPointResponse>))]
+[JsonSerializable(typeof(UsageHistoryResponse))]
 internal sealed partial class NetWatchJsonContext : JsonSerializerContext;

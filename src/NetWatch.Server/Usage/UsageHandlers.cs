@@ -26,10 +26,25 @@ internal static class UsageHandlers
             request.Query["wanInterface"],
             cancellationToken));
 
+    public static async Task<IResult> GetHistoryAsync(
+        HttpRequest request,
+        UsageService service,
+        CancellationToken cancellationToken) =>
+        Map(await service.GetHistoryAsync(
+            request.Query["from"],
+            request.Query["to"],
+            request.Query["timezone"],
+            request.Query["grouping"],
+            request.Query["deviceId"],
+            request.Query["category"],
+            request.Query["wanInterface"],
+            cancellationToken));
+
     private static IResult Map(ServiceResult result) => result switch
     {
         UsageSummaryResult success => Results.Ok(success.Value),
         DeviceUsageListResult success => Results.Ok(success.Value),
+        UsageHistoryResult success => Results.Ok(success.Value),
         InvalidUsageQueryServiceErrorResult => Results.Problem(
             statusCode: StatusCodes.Status400BadRequest),
         UsageUnavailableServiceErrorResult => Results.Problem(
@@ -39,4 +54,3 @@ internal static class UsageHandlers
         _ => Results.StatusCode(StatusCodes.Status500InternalServerError)
     };
 }
-

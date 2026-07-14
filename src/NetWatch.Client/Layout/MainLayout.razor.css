@@ -1,63 +1,212 @@
-.page {
+.app-shell {
+    background: var(--background);
+    display: grid;
+    grid-template-columns: 14.25rem minmax(0, 1fr);
     min-height: 100vh;
 }
 
-header {
-    align-items: center;
-    background: #12304a;
-    color: #fff;
+.sidebar {
+    background: linear-gradient(180deg, #071322 0%, #081627 60%, #07121f 100%);
+    border-right: 1px solid var(--border);
     display: flex;
-    gap: 1rem;
-    padding: 1rem 2rem;
+    flex-direction: column;
+    min-height: 100vh;
+    padding: 1.15rem 0.75rem;
+    position: sticky;
+    top: 0;
 }
 
-header a {
-    color: inherit;
-    font-size: 1.25rem;
-    font-weight: 700;
+.brand {
+    align-items: center;
+    color: var(--text-strong);
+    display: flex;
+    font-size: 1.15rem;
+    font-weight: 750;
+    gap: 0.75rem;
+    letter-spacing: -0.02em;
+    padding: 0.35rem 0.6rem 1.5rem;
     text-decoration: none;
 }
 
-header span {
-    color: #c7d6e2;
-    font-size: 0.9rem;
+.brand-mark {
+    height: 1.7rem;
+    position: relative;
+    width: 2.1rem;
+}
+
+.brand-mark::before,
+.brand-mark::after,
+.brand-mark i {
+    background: var(--blue);
+    border-radius: 1rem;
+    content: "";
+    display: block;
+    height: 0.16rem;
+    position: absolute;
+    top: 0.78rem;
+}
+
+.brand-mark::before {
+    left: 0;
+    width: 0.55rem;
+}
+
+.brand-mark i {
+    box-shadow: 0.32rem -0.7rem 0 -0.02rem var(--blue), 0.64rem 0.63rem 0 -0.02rem var(--blue);
+    left: 0.45rem;
+    transform: rotate(-67deg);
+    width: 1rem;
+}
+
+.brand-mark::after {
+    right: 0;
+    width: 0.58rem;
 }
 
 nav {
-    display: flex;
-    gap: 1rem;
-    margin-left: auto;
+    display: grid;
+    gap: 0.35rem;
 }
 
 nav a {
-    font-size: 1rem;
-    font-weight: 500;
+    align-items: center;
+    border: 1px solid transparent;
+    border-radius: 0.5rem;
+    color: var(--text-muted);
+    display: flex;
+    gap: 0.7rem;
+    padding: 0.7rem 0.75rem;
+    text-decoration: none;
+}
+
+nav a:hover {
+    background: rgb(255 255 255 / 3%);
+    color: var(--text);
 }
 
 nav a.active {
-    text-decoration: underline;
-    text-underline-offset: 0.35rem;
+    background: linear-gradient(90deg, rgb(29 103 223 / 28%), rgb(27 83 178 / 16%));
+    border-color: rgb(67 137 255 / 26%);
+    color: #eef6ff;
+}
+
+.nav-symbol {
+    color: var(--blue-light);
+    font-size: 1.05rem;
+    text-align: center;
+    width: 1.2rem;
+}
+
+.sidebar-status {
+    border: 1px solid var(--border);
+    border-radius: 0.55rem;
+    margin-top: auto;
+    padding: 0.8rem;
+}
+
+.sidebar-status p {
+    align-items: center;
+    color: var(--text);
+    display: flex;
+    font-size: 0.76rem;
+    gap: 0.45rem;
+    margin: 0 0 0.3rem;
+}
+
+.sidebar-status i,
+.phase-badge i {
+    background: var(--green);
+    border-radius: 50%;
+    height: 0.45rem;
+    width: 0.45rem;
+}
+
+.sidebar-status span {
+    color: var(--text-subtle);
+    font-size: 0.68rem;
+}
+
+.workspace {
+    min-width: 0;
+}
+
+.topbar {
+    align-items: center;
+    backdrop-filter: blur(12px);
+    background: rgb(7 17 31 / 78%);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    height: 3.7rem;
+    justify-content: space-between;
+    padding: 0 1.4rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.topbar-context {
+    color: var(--text-subtle);
+    font-size: 0.74rem;
+}
+
+.phase-badge {
+    align-items: center;
+    background: rgb(54 211 124 / 8%);
+    border: 1px solid rgb(54 211 124 / 13%);
+    border-radius: 2rem;
+    color: var(--green);
+    display: flex;
+    font-size: 0.72rem;
+    gap: 0.45rem;
+    padding: 0.4rem 0.65rem;
 }
 
 .content {
     margin: 0 auto;
-    max-width: 64rem;
-    padding: 2rem;
+    max-width: 92rem;
+    padding: 1.4rem;
 }
 
-@media (max-width: 640px) {
-    header {
-        align-items: flex-start;
-        flex-direction: column;
-        gap: 0.25rem;
-        padding: 1rem;
+@media (max-width: 760px) {
+    .app-shell {
+        display: block;
+    }
+
+    .sidebar {
+        align-items: center;
+        border-bottom: 1px solid var(--border);
+        border-right: 0;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        min-height: auto;
+        padding: 0.65rem 0.8rem;
+        position: static;
+    }
+
+    .brand {
+        padding: 0;
+    }
+
+    .brand-mark {
+        display: none;
     }
 
     nav {
-        margin-left: 0;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    nav a {
+        padding: 0.5rem 0.65rem;
+    }
+
+    .nav-symbol,
+    .sidebar-status,
+    .topbar {
+        display: none;
     }
 
     .content {
-        padding: 1.25rem 1rem;
+        padding: 1rem;
     }
 }

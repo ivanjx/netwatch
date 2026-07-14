@@ -73,6 +73,54 @@ public sealed class UsageTimezoneBoundaryTests
         });
     }
 
+    [Fact]
+    public async Task History_GroupsLocalCalendarDaysAndFiltersByDevice()
+    {
+        await WithDatabaseAsync(async (deviceRepository, usageRepository) =>
+        {
+            var deviceId = await CreateDeviceAsync(deviceRepository);
+            await StoreUsageAsync(
+                usageRepository,
+                new UsageDelta(deviceId, new DateTimeOffset(2026, 3, 8, 6, 0, 0, TimeSpan.Zero), UsageCategories.Internet, "wan1", 100, 200, 1, 2),
+                new UsageDelta(deviceId, new DateTimeOffset(2026, 3, 8, 7, 0, 0, TimeSpan.Zero), UsageCategories.Internet, "wan1", 300, 400, 3, 4),
+                new UsageDelta(deviceId, new DateTimeOffset(2026, 3, 9, 5, 0, 0, TimeSpan.Zero), UsageCategories.Internet, "wan1", 500, 600, 5, 6));
+
+            var timeZone = TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
+            var service = new UsageService(
+                usageRepository,
+                CreateOptions(timeZone),
+                new FixedTimeProvider(new DateTimeOffset(2026, 3, 10, 0, 0, 0, TimeSpan.Zero)));
+
+            var history = Assert.IsType<UsageHistoryResult>(await service.GetHistoryAsync(
+                "2026-03-08",
+                "2026-03-10",
+                null,
+                "day",
+                deviceId,
+                null,
+                null,
+                CancellationToken.None)).Value;
+
+            Assert.Equal(deviceId, history.DeviceId);
+            Assert.Equal(new DateTimeOffset(2026, 3, 8, 5, 0, 0, TimeSpan.Zero), history.FromUtc);
+            Assert.Equal(2, history.Points.Count);
+            Assert.Equal("8 Mar", history.Points[0].Label);
+            Assert.Equal(400, history.Points[0].Totals.UploadBytes);
+            Assert.Equal(600, history.Points[0].Totals.DownloadBytes);
+
+            var missingDevice = Assert.IsType<UsageHistoryResult>(await service.GetHistoryAsync(
+                "2026-03-08",
+                "2026-03-10",
+                null,
+                "day",
+                "missing-device",
+                null,
+                null,
+                CancellationToken.None)).Value;
+            Assert.Empty(missingDevice.Points);
+        });
+    }
+
     private static async Task WithDatabaseAsync(
         Func<DeviceRepository, UsageRepository, Task> test)
     {

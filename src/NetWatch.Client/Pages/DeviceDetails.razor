@@ -1,0 +1,218 @@
+@page "/devices/{Id}"
+@inject HttpClient _http
+@using NetWatch.Core.Devices
+@using NetWatch.Core.Usage
+
+<PageTitle>@(_device?.DisplayName ?? "Device") — NetWatch</PageTitle>
+
+@if (_loading)
+{
+    <div class="detail-loading" aria-label="Loading device details"><span></span><span></span><span></span></div>
+}
+else if (_error is not null)
+{
+    <section class="detail-state" role="alert">
+        <strong>Device details are unavailable</strong>
+        <p>@_error</p>
+        <a class="secondary-button" href="devices">Back to devices</a>
+    </section>
+}
+else if (_device is not null)
+{
+    <div class="page-heading">
+        <div>
+            <a class="back-link" href="devices">← Devices</a>
+            <h1>@_device.DisplayName</h1>
+            <p>@(_device.DiscoveredName ?? "Manually managed device")</p>
+        </div>
+        <span class="status-pill @(_device.IsOnline ? "online" : "offline")">
+            <i></i>@(_device.IsOnline ? "Online" : "Offline")
+        </span>
+    </div>
+
+    <section class="stat-grid" aria-label="Device period totals">
+        <UsageStatCard Label="Today" PrimaryBytes="@Total(_today)" Detail="@Split(_today)" Mark="1" />
+        <UsageStatCard Label="This week" PrimaryBytes="@Total(_week)" Detail="@Split(_week)" Mark="7" AccentClass="accent-violet" />
+        <UsageStatCard Label="This month" PrimaryBytes="@Total(_month)" Detail="@Split(_month)" Mark="30" AccentClass="accent-green" />
+    </section>
+
+    <div class="detail-grid">
+        <section class="panel history-panel">
+            <div class="panel-heading history-heading">
+                <div><p class="eyebrow">Selected range</p><h2>Usage history</h2></div>
+                <div class="date-range">
+                    <label>From<input type="date" @bind="_fromDate" /></label>
+                    <label>Through<input type="date" @bind="_toDate" /></label>
+                    <button class="secondary-button" disabled="@_historyLoading" @onclick="LoadHistoryAsync">Apply</button>
+                </div>
+            </div>
+            @if (_rangeError is not null)
+            {
+                <p class="range-error" role="alert">@_rangeError</p>
+            }
+            else if (_historyLoading)
+            {
+                <div class="history-loading">Loading history…</div>
+            }
+            else
+            {
+                <UsageBarChart Points="@(_history?.Points ?? [])" />
+                <div class="range-total">
+                    <span>Range total</span>
+                    <strong>@UsageFormatting.Bytes(HistoryTotal)</strong>
+                </div>
+            }
+        </section>
+
+        <aside class="panel identity-panel">
+            <div class="panel-heading"><div><p class="eyebrow">Identity</p><h2>Device information</h2></div></div>
+            <dl>
+                <div><dt>Current IP</dt><dd>@(_device.CurrentIpAddress ?? "Not assigned")</dd></div>
+                <div><dt>MAC address</dt><dd>@(_device.MacAddress ?? "Not recorded")</dd></div>
+                <div><dt>Type</dt><dd>@_device.Type</dd></div>
+                <div><dt>Source</dt><dd>@(_device.IsManual ? "Manual" : "DHCP")</dd></div>
+                <div><dt>Last seen</dt><dd>@(_device.LastSeen ?? "Not reported")</dd></div>
+            </dl>
+            @if (!string.IsNullOrWhiteSpace(_device.Notes))
+            {
+                <div class="notes"><span>Notes</span><p>@_device.Notes</p></div>
+            }
+        </aside>
+    </div>
+
+    <section class="panel assignments-panel">
+        <div class="panel-heading"><div><p class="eyebrow">Address history</p><h2>IP assignments</h2></div></div>
+        @if (_device.IpAssignments.Count == 0)
+        {
+            <p class="empty-copy">No IP assignments have been recorded.</p>
+        }
+        else
+        {
+            <div class="table-scroll">
+                <table>
+                    <thead><tr><th>IP address</th><th>Source</th><th>Assigned</th><th>Ended</th></tr></thead>
+                    <tbody>
+                        @foreach (var assignment in _device.IpAssignments)
+                        {
+                            <tr>
+                                <td><code>@assignment.IpAddress</code></td>
+                                <td>@assignment.Source</td>
+                                <td>@assignment.ValidFromUtc.ToLocalTime().ToString("g")</td>
+                                <td>@(assignment.ValidToUtc?.ToLocalTime().ToString("g") ?? "Current")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+}
+
+@code {
+    [Parameter] public string Id { get; set; } = string.Empty;
+
+    private DeviceDetailsResponse? _device;
+    private UsageSummaryResponse? _summary;
+    private UsageTotalsResponse _today = EmptyTotals;
+    private UsageTotalsResponse _week = EmptyTotals;
+    private UsageTotalsResponse _month = EmptyTotals;
+    private UsageHistoryResponse? _history;
+    private DateTime _fromDate;
+    private DateTime _toDate;
+    private string? _error;
+    private string? _rangeError;
+    private bool _loading = true;
+    private bool _historyLoading;
+
+    private static UsageTotalsResponse EmptyTotals => new(0, 0, 0, 0);
+    private long HistoryTotal => _history?.Points.Sum(point => point.Totals.DownloadBytes + point.Totals.UploadBytes) ?? 0;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            var deviceTask = _http.GetFromJsonAsync<DeviceDetailsResponse>($"api/devices/{Uri.EscapeDataString(Id)}");
+            var summaryTask = _http.GetFromJsonAsync<UsageSummaryResponse>("api/usage/summary");
+            await Task.WhenAll(deviceTask, summaryTask);
+            _device = await deviceTask;
+            _summary = await summaryTask;
+            if (_device is null || _summary is null)
+            {
+                _error = "NetWatch returned an incomplete device record.";
+                return;
+            }
+
+            var localToday = DateTime.Today;
+            _fromDate = new DateTime(localToday.Year, localToday.Month, 1);
+            _toDate = localToday;
+            var todayTask = LoadDeviceTotalsAsync(_summary.Today);
+            var weekTask = LoadDeviceTotalsAsync(_summary.Week);
+            var monthTask = LoadDeviceTotalsAsync(_summary.Month);
+            await Task.WhenAll(todayTask, weekTask, monthTask);
+            _today = await todayTask;
+            _week = await weekTask;
+            _month = await monthTask;
+            await LoadHistoryAsync();
+        }
+        catch (HttpRequestException exception)
+        {
+            _error = exception.StatusCode == System.Net.HttpStatusCode.NotFound ?
+                "This device does not exist or has been archived." :
+                "NetWatch could not load this device. Try again after checking the server status.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task<UsageTotalsResponse> LoadDeviceTotalsAsync(UsagePeriodResponse period)
+    {
+        var from = Uri.EscapeDataString(period.FromUtc.ToString("O"));
+        var to = Uri.EscapeDataString(period.ToUtc.ToString("O"));
+        var devices = await _http.GetFromJsonAsync<List<DeviceUsageResponse>>($"api/usage/devices?from={from}&to={to}") ?? [];
+        return devices.FirstOrDefault(device => device.DeviceId == Id)?.Totals ?? EmptyTotals;
+    }
+
+    private async Task LoadHistoryAsync()
+    {
+        _rangeError = null;
+        if (_fromDate > _toDate)
+        {
+            _rangeError = "Choose a valid range with the start on or before the end.";
+            return;
+        }
+
+        var dayCount = (_toDate.Date - _fromDate.Date).Days + 1;
+        if (dayCount > 370)
+        {
+            _rangeError = "Choose a date range of 370 days or fewer.";
+            return;
+        }
+
+        _historyLoading = true;
+        try
+        {
+            var from = _fromDate.ToString("yyyy-MM-dd");
+            var toExclusive = _toDate.AddDays(1).ToString("yyyy-MM-dd");
+            var grouping = dayCount > 90 ? "month" : "day";
+            _history = await _http.GetFromJsonAsync<UsageHistoryResponse>(
+                $"api/usage/history?from={from}&to={toExclusive}&grouping={grouping}&deviceId={Uri.EscapeDataString(Id)}");
+        }
+        catch (HttpRequestException)
+        {
+            _rangeError = "Usage history could not be loaded for that range.";
+        }
+        finally
+        {
+            _historyLoading = false;
+        }
+    }
+
+    private static long Total(UsageTotalsResponse totals) => totals.DownloadBytes + totals.UploadBytes;
+
+    private static string Split(UsageTotalsResponse totals) =>
+        $"{UsageFormatting.Bytes(totals.DownloadBytes)} down · {UsageFormatting.Bytes(totals.UploadBytes)} up";
+}

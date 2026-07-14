@@ -1,38 +1,244 @@
 @page "/"
 @inject HttpClient _http
-@using NetWatch.Core.Diagnostics
+@using NetWatch.Core.Devices
+@using NetWatch.Core.Usage
 
-<PageTitle>NetWatch</PageTitle>
+<PageTitle>Dashboard — NetWatch</PageTitle>
 
-<h1>NetWatch</h1>
+<div class="page-heading">
+    <div>
+        <p class="eyebrow">Historical overview</p>
+        <h1>Dashboard</h1>
+        <p>Network usage captured from your MikroTik router.</p>
+    </div>
+    @if (_summary is not null)
+    {
+        <span class="sync-note"><i></i>Updated @RelativeTime(_summary.GeneratedAtUtc)</span>
+    }
+</div>
 
-<p class="lede">Project foundation status</p>
-
-@if (_status is null)
+@if (_loading)
 {
-    <p>Loading API status…</p>
+    <div class="skeleton-grid" aria-label="Loading dashboard">
+        @for (var index = 0; index < 4; index++)
+        {
+            <span></span>
+        }
+    </div>
 }
-else
+else if (_error is not null)
 {
-    <dl>
-        <dt>Database</dt>
-        <dd>@_status.Database</dd>
-        <dt>Schema version</dt>
-        <dd>@_status.SchemaVersion</dd>
-        <dt>NetFlow listener</dt>
-        <dd><code>@_status.NetFlowEndpoint/udp</code></dd>
-        <dt>MikroTik configured</dt>
-        <dd>@(_status.MikroTikConfigured ? "Yes" : "No")</dd>
-        <dt>Reporting timezone</dt>
-        <dd>@_status.ReportingTimezone</dd>
-    </dl>
+    <section class="state-panel error-state" role="alert">
+        <span class="state-icon">!</span>
+        <div><strong>Dashboard data is unavailable</strong><p>@_error</p></div>
+        <button class="secondary-button" @onclick="LoadAsync">Try again</button>
+    </section>
+}
+else if (_summary is not null)
+{
+    <div class="period-tabs" aria-label="Usage period">
+        <button class="@TodayPeriodClass" @onclick="SelectTodayAsync">Today</button>
+        <button class="@WeekPeriodClass" @onclick="SelectWeekAsync">This week</button>
+        <button class="@MonthPeriodClass" @onclick="SelectMonthAsync">This month</button>
+    </div>
+
+    <section class="stat-grid" aria-label="Network totals">
+        <UsageStatCard Label="Total download" PrimaryBytes="@SelectedPeriod.Totals.DownloadBytes"
+                       Detail="@($"{UsageFormatting.Number(SelectedPeriod.Totals.DownloadPackets)} packets")" Mark="↓" />
+        <UsageStatCard Label="Total upload" PrimaryBytes="@SelectedPeriod.Totals.UploadBytes"
+                       Detail="@($"{UsageFormatting.Number(SelectedPeriod.Totals.UploadPackets)} packets")" Mark="↑" AccentClass="accent-violet" />
+        <UsageStatCard Label="Total traffic" PrimaryBytes="@(SelectedPeriod.Totals.DownloadBytes + SelectedPeriod.Totals.UploadBytes)"
+                       Detail="@PeriodLabel" Mark="∿" AccentClass="accent-green" />
+        <UsageStatCard Label="Online devices" Value="@OnlineDeviceCount.ToString()"
+                       Detail="@($"{_deviceStates.Count} discovered devices")" Mark="●" AccentClass="accent-amber" />
+    </section>
+
+    <div class="dashboard-grid">
+        <section class="panel chart-panel">
+            <div class="panel-heading">
+                <div><p class="eyebrow">Network-wide</p><h2>Internet usage</h2></div>
+                <span>@ChartCaption</span>
+            </div>
+            @if (_periodLoading)
+            {
+                <div class="chart-loading">Loading usage…</div>
+            }
+            else
+            {
+                <UsageBarChart Points="@(_history?.Points ?? [])" />
+            }
+        </section>
+
+        <section class="panel ranking-panel">
+            <div class="panel-heading">
+                <div><p class="eyebrow">Ranked by traffic</p><h2>Top devices</h2></div>
+                <a href="devices">View all</a>
+            </div>
+            @if (_deviceUsage.Count == 0)
+            {
+                <div class="compact-empty">No device usage for this period.</div>
+            }
+            else
+            {
+                <ol class="ranking-list">
+                    @foreach (var device in _deviceUsage.Take(6))
+                    {
+                        var total = device.Totals.DownloadBytes + device.Totals.UploadBytes;
+                        <li>
+                            <span class="rank">@(Array.IndexOf(_deviceUsage.ToArray(), device) + 1)</span>
+                            <div><a href="@($"devices/{device.DeviceId}")">@device.DisplayName</a><span>@Share(total)</span></div>
+                            <strong>@UsageFormatting.Bytes(total)</strong>
+                        </li>
+                    }
+                </ol>
+            }
+        </section>
+    </div>
+
+    <section class="panel device-table-panel">
+        <div class="panel-heading">
+            <div><p class="eyebrow">Historical totals</p><h2>Device usage</h2></div>
+            <a class="secondary-button" href="devices">Manage devices</a>
+        </div>
+        @if (_deviceUsage.Count == 0)
+        {
+            <div class="compact-empty">Devices will appear after discovery and the first usage flush.</div>
+        }
+        else
+        {
+            <div class="table-scroll">
+                <table>
+                    <thead><tr><th>Device</th><th>Download</th><th>Upload</th><th>Total</th><th>Share</th></tr></thead>
+                    <tbody>
+                        @foreach (var device in _deviceUsage)
+                        {
+                            var total = device.Totals.DownloadBytes + device.Totals.UploadBytes;
+                            <tr>
+                                <td><a href="@($"devices/{device.DeviceId}")">@device.DisplayName</a></td>
+                                <td class="download-value">@UsageFormatting.Bytes(device.Totals.DownloadBytes)</td>
+                                <td class="upload-value">@UsageFormatting.Bytes(device.Totals.UploadBytes)</td>
+                                <td>@UsageFormatting.Bytes(total)</td>
+                                <td>@Share(total)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
 }
 
 @code {
-    private SystemStatusResponse? _status;
+    private UsageSummaryResponse? _summary;
+    private UsageHistoryResponse? _history;
+    private List<DeviceUsageResponse> _deviceUsage = [];
+    private List<DeviceSummaryResponse> _deviceStates = [];
+    private string _selectedPeriod = "today";
+    private string? _error;
+    private bool _loading = true;
+    private bool _periodLoading;
 
-    protected override async Task OnInitializedAsync()
+    private UsagePeriodResponse SelectedPeriod => _selectedPeriod switch
     {
-        _status = await _http.GetFromJsonAsync<SystemStatusResponse>("api/status");
+        "week" => _summary!.Week,
+        "month" => _summary!.Month,
+        _ => _summary!.Today
+    };
+
+    private string PeriodLabel => _selectedPeriod switch
+    {
+        "week" => "Since Monday",
+        "month" => "Since the first of the month",
+        _ => "Since local midnight"
+    };
+
+    private string ChartCaption => _selectedPeriod == "today" ? "Hourly totals" : "Daily totals";
+    private string TodayPeriodClass => PeriodClass("today");
+    private string WeekPeriodClass => PeriodClass("week");
+    private string MonthPeriodClass => PeriodClass("month");
+    private int OnlineDeviceCount => _deviceStates.Count(device => device.IsOnline);
+    private long PeriodTotal => SelectedPeriod.Totals.DownloadBytes + SelectedPeriod.Totals.UploadBytes;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            var summaryTask = _http.GetFromJsonAsync<UsageSummaryResponse>("api/usage/summary");
+            var devicesTask = _http.GetFromJsonAsync<List<DeviceSummaryResponse>>("api/devices");
+            await Task.WhenAll(summaryTask, devicesTask);
+            _summary = await summaryTask;
+            _deviceStates = await devicesTask ?? [];
+            if (_summary is null)
+            {
+                _error = "The usage service returned no data.";
+                return;
+            }
+
+            await LoadPeriodAsync();
+        }
+        catch (HttpRequestException)
+        {
+            _error = "NetWatch could not reach the historical usage service. Check the collector status and try again.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task SelectPeriodAsync(string period)
+    {
+        if (_selectedPeriod == period || _summary is null)
+        {
+            return;
+        }
+
+        _selectedPeriod = period;
+        await LoadPeriodAsync();
+    }
+
+    private Task SelectTodayAsync() => SelectPeriodAsync("today");
+    private Task SelectWeekAsync() => SelectPeriodAsync("week");
+    private Task SelectMonthAsync() => SelectPeriodAsync("month");
+
+    private async Task LoadPeriodAsync()
+    {
+        _periodLoading = true;
+        try
+        {
+            var range = SelectedPeriod;
+            var from = Uri.EscapeDataString(range.FromUtc.ToString("O"));
+            var to = Uri.EscapeDataString(range.ToUtc.ToString("O"));
+            var grouping = _selectedPeriod == "today" ? "hour" : "day";
+            var historyTask = _http.GetFromJsonAsync<UsageHistoryResponse>(
+                $"api/usage/history?from={from}&to={to}&grouping={grouping}");
+            var devicesTask = _http.GetFromJsonAsync<List<DeviceUsageResponse>>(
+                $"api/usage/devices?from={from}&to={to}");
+            await Task.WhenAll(historyTask, devicesTask);
+            _history = await historyTask;
+            _deviceUsage = await devicesTask ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Usage for the selected period could not be loaded.";
+        }
+        finally
+        {
+            _periodLoading = false;
+        }
+    }
+
+    private string PeriodClass(string period) => _selectedPeriod == period ? "active" : string.Empty;
+
+    private string Share(long total) => PeriodTotal == 0 ? "0%" : $"{total * 100d / PeriodTotal:0.#}%";
+
+    private static string RelativeTime(DateTimeOffset value)
+    {
+        var age = DateTimeOffset.UtcNow - value;
+        return age.TotalMinutes < 1 ? "just now" : $"{Math.Max(1, (int)age.TotalMinutes)} min ago";
     }
 }

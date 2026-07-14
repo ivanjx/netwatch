@@ -1,15 +1,36 @@
-﻿@inherits LayoutComponentBase
-<div class="page">
-    <header>
-        <a href="">NetWatch</a>
-        <span>RouterOS v7+ bandwidth monitor</span>
-        <nav>
-            <NavLink href="" Match="NavLinkMatch.All">Status</NavLink>
-            <NavLink href="devices">Devices</NavLink>
-        </nav>
-    </header>
+@inherits LayoutComponentBase
 
-    <main class="content">
-        @Body
-    </main>
+<div class="app-shell">
+    <aside class="sidebar">
+        <a class="brand" href="" aria-label="NetWatch dashboard">
+            <span class="brand-mark" aria-hidden="true"><i></i></span>
+            <span>NetWatch</span>
+        </a>
+
+        <nav aria-label="Primary navigation">
+            <NavLink href="" Match="NavLinkMatch.All">
+                <span class="nav-symbol" aria-hidden="true">⌂</span>
+                <span>Dashboard</span>
+            </NavLink>
+            <NavLink href="devices">
+                <span class="nav-symbol" aria-hidden="true">▣</span>
+                <span>Devices</span>
+            </NavLink>
+        </nav>
+
+        <div class="sidebar-status">
+            <p><i></i>Historical monitoring</p>
+            <span>RouterOS v7+ · NetFlow v5</span>
+        </div>
+    </aside>
+
+    <div class="workspace">
+        <header class="topbar">
+            <span class="topbar-context">Self-hosted network monitor</span>
+            <span class="phase-badge"><i></i>Historical data</span>
+        </header>
+        <main class="content">
+            @Body
+        </main>
+    </div>
 </div>

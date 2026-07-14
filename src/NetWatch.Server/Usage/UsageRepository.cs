@@ -285,6 +285,55 @@ internal sealed class UsageRepository(
         }
     }
 
+    public async Task<RepositoryResult> GetHourlySamplesAsync(
+        UsageQuery query,
+        string? deviceId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandText =
+                $"""
+                SELECT hour_start_utc,
+                       COALESCE(SUM(upload_bytes), 0), COALESCE(SUM(download_bytes), 0),
+                       COALESCE(SUM(upload_packets), 0), COALESCE(SUM(download_packets), 0)
+                FROM usage_hourly
+                WHERE hour_start_utc >= $from AND hour_start_utc < $to
+                  AND category = $category
+                  {(query.WanInterface is null ? string.Empty : "AND wan_interface = $wanInterface")}
+                  {(deviceId is null ? string.Empty : "AND device_id = $deviceId")}
+                GROUP BY hour_start_utc
+                ORDER BY hour_start_utc;
+                """;
+            AddQueryParameters(command, query);
+            if (deviceId is not null)
+            {
+                command.Parameters.AddWithValue("$deviceId", deviceId);
+            }
+
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            var samples = new List<UsageHourlySample>();
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                samples.Add(new UsageHourlySample(
+                    DateTimeOffset.Parse(reader.GetString(0)),
+                    ReadTotals(reader, 1)));
+            }
+
+            return new RepositoryResult<IReadOnlyList<UsageHourlySample>>(samples);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return LogError(exception, "Failed to read usage history");
+        }
+    }
+
     public async Task<RepositoryResult> GetDiagnosticStateAsync(CancellationToken cancellationToken)
     {
         try

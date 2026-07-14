@@ -1,0 +1,19 @@
+@using NetWatch.Core.Usage
+
+<article class="stat-card @AccentClass">
+    <div class="stat-card__topline">
+        <span>@Label</span>
+        <span class="stat-card__mark" aria-hidden="true">@Mark</span>
+    </div>
+    <strong>@(Value ?? UsageFormatting.Bytes(PrimaryBytes))</strong>
+    <span class="stat-card__detail">@Detail</span>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter] public long PrimaryBytes { get; set; }
+    [Parameter] public string? Value { get; set; }
+    [Parameter, EditorRequired] public string Detail { get; set; } = string.Empty;
+    [Parameter] public string Mark { get; set; } = "•";
+    [Parameter] public string AccentClass { get; set; } = "accent-blue";
+}

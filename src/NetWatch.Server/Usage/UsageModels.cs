@@ -1,5 +1,7 @@
 using System.Net;
 
+using NetWatch.Core.Usage;
+
 namespace NetWatch.Server.Usage;
 
 internal static class UsageCategories
@@ -63,6 +65,10 @@ internal sealed record UsageQuery(
     string Category,
     string? WanInterface);
 
+internal sealed record UsageHourlySample(
+    DateTimeOffset HourStartUtc,
+    UsageTotalsResponse Totals);
+
 internal sealed record ReconciledUsage(long UnresolvedId, UsageDelta Delta);
 
 internal sealed record UsageDiagnosticState(
@@ -70,4 +76,3 @@ internal sealed record UsageDiagnosticState(
     long UnresolvedBytes,
     DateTimeOffset? LastFlushAtUtc,
     DateTimeOffset? LastReconciliationAtUtc);
-

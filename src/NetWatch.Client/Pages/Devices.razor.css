@@ -1,120 +1,153 @@
-.lede {
-    color: #4c5d6b;
+.page-heading {
+    align-items: end;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+}
+
+.page-heading h1 {
+    margin: 0;
+}
+
+.page-heading > p {
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.eyebrow {
+    color: var(--text-subtle);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    margin: 0 0 0.25rem;
+    text-transform: uppercase;
 }
 
 .manual-device {
-    background: #f4f7f9;
-    border: 1px solid #d7e0e7;
-    border-radius: 0.5rem;
-    margin: 2rem 0;
-    padding: 1.25rem;
+    background: linear-gradient(145deg, rgb(17 31 50 / 96%), rgb(12 25 42 / 96%));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 1rem;
+    padding: 1.15rem;
 }
 
 .manual-device h2,
 .device-card h2 {
-    margin-top: 0;
+    color: var(--text-strong);
+    font-size: 1rem;
+    margin: 0 0 0.9rem;
 }
 
 .form-grid {
     display: grid;
-    gap: 1rem;
+    gap: 0.8rem;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    margin-bottom: 1rem;
+    margin-bottom: 0.9rem;
 }
 
 label {
+    color: var(--text-muted);
     display: grid;
+    font-size: 0.75rem;
     font-weight: 600;
-    gap: 0.35rem;
+    gap: 0.3rem;
 }
 
 .notes {
     grid-column: 1 / -1;
 }
 
-input,
-textarea {
-    border: 1px solid #9caeba;
-    border-radius: 0.3rem;
-    font: inherit;
-    padding: 0.55rem;
-}
-
 textarea {
     min-height: 4rem;
-}
-
-.primary-button {
-    background: #1769aa;
-    border: 1px solid #145b93;
-    border-radius: 0.3rem;
-    color: #fff;
-    cursor: pointer;
-    font: inherit;
-    padding: 0.6rem 1rem;
+    resize: vertical;
 }
 
 .device-list {
     display: grid;
-    gap: 0.75rem;
+    gap: 0.65rem;
 }
 
 .device-card {
     align-items: center;
-    border: 1px solid #d7e0e7;
-    border-radius: 0.5rem;
+    background: linear-gradient(145deg, rgb(17 31 50 / 96%), rgb(12 25 42 / 96%));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
     display: flex;
     justify-content: space-between;
-    padding: 1rem 1.25rem;
+    padding: 0.95rem 1.1rem;
+}
+
+.device-card:hover {
+    border-color: #2e4b68;
 }
 
 .device-card h2 {
     display: inline;
-    font-size: 1.1rem;
-    margin-right: 0.75rem;
+    margin-right: 0.7rem;
+}
+
+.device-card h2 a {
+    color: var(--text-strong);
 }
 
 .device-card p {
-    color: #4c5d6b;
-    margin: 0.45rem 0 0;
+    color: var(--text-subtle);
+    font-size: 0.76rem;
+    margin: 0.4rem 0 0;
 }
 
 .device-state {
+    align-items: end;
     display: grid;
-    gap: 0.35rem;
+    font-size: 0.72rem;
+    gap: 0.22rem;
     justify-items: end;
 }
 
+.device-state a {
+    margin-top: 0.2rem;
+}
+
 .online {
-    color: #18733a;
+    color: var(--green);
 }
 
 .offline {
-    color: #697985;
+    color: var(--text-subtle);
 }
 
-.link-button {
-    background: none;
+.link-button,
+.device-card button {
+    background: transparent;
     border: 0;
-    color: #1769aa;
+    color: var(--blue-light);
     cursor: pointer;
-    padding: 0;
-    text-decoration: underline;
+    font-size: 0.73rem;
+    padding: 0 0.35rem;
 }
 
-.error-message {
-    background: #fff0f0;
-    border: 1px solid #dcaaaa;
-    color: #7d2020;
-    padding: 0.75rem 1rem;
+.error-message,
+.empty-state {
+    background: rgb(248 103 113 / 9%);
+    border: 1px solid rgb(248 103 113 / 20%);
+    border-radius: var(--radius);
+    color: #ffadb3;
+    padding: 0.8rem 1rem;
 }
 
 .empty-state {
-    color: #4c5d6b;
-    padding: 2rem 0;
+    background: var(--surface);
+    border-color: var(--border);
+    color: var(--text-muted);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 700px) {
+    .page-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
     .form-grid {
         grid-template-columns: 1fr;
     }
@@ -122,10 +155,11 @@ textarea {
     .device-card {
         align-items: flex-start;
         flex-direction: column;
-        gap: 1rem;
+        gap: 0.8rem;
     }
 
     .device-state {
+        align-items: start;
         justify-items: start;
     }
 }

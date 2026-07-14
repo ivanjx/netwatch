@@ -1,0 +1,54 @@
+.stat-card {
+    background: linear-gradient(145deg, rgb(17 31 50 / 96%), rgb(13 26 43 / 96%));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: grid;
+    gap: 0.45rem;
+    min-width: 0;
+    padding: 1.15rem;
+}
+
+.stat-card__topline {
+    align-items: center;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+}
+
+.stat-card__mark {
+    align-items: center;
+    background: rgb(58 142 255 / 13%);
+    border-radius: 50%;
+    color: var(--blue);
+    display: inline-flex;
+    font-size: 1.25rem;
+    height: 2.2rem;
+    justify-content: center;
+    width: 2.2rem;
+}
+
+.stat-card strong {
+    color: var(--text-strong);
+    font-size: clamp(1.35rem, 2vw, 1.85rem);
+    letter-spacing: -0.035em;
+}
+
+.stat-card__detail {
+    color: var(--text-subtle);
+    font-size: 0.82rem;
+}
+
+.accent-violet .stat-card__mark {
+    background: rgb(153 92 255 / 13%);
+    color: var(--violet);
+}
+
+.accent-green .stat-card__mark {
+    background: rgb(54 211 124 / 13%);
+    color: var(--green);
+}
+
+.accent-amber .stat-card__mark {
+    background: rgb(255 174 61 / 13%);
+    color: var(--amber);
+}

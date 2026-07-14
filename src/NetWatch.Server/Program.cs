@@ -62,6 +62,7 @@ app.MapPatch("/api/devices/{id}", DeviceHandlers.RenameAsync);
 app.MapPost("/api/devices/manual", DeviceHandlers.CreateManualAsync);
 app.MapGet("/api/usage/summary", UsageHandlers.GetSummaryAsync);
 app.MapGet("/api/usage/devices", UsageHandlers.GetDevicesAsync);
+app.MapGet("/api/usage/history", UsageHandlers.GetHistoryAsync);
 
 app.MapFallbackToFile("index.html");
 

@@ -6,8 +6,10 @@
 
 <PageTitle>Devices — NetWatch</PageTitle>
 
-<h1>Devices</h1>
-<p class="lede">DHCP clients discovered from RouterOS and devices you add manually.</p>
+<div class="page-heading">
+    <div><p class="eyebrow">Inventory</p><h1>Devices</h1></div>
+    <p>DHCP clients discovered from RouterOS and devices you add manually.</p>
+</div>
 
 @if (_error is not null)
 {
@@ -49,14 +51,15 @@ else
                     }
                     else
                     {
-                        <h2>@device.DisplayName</h2>
+                        <h2><a href="@($"devices/{device.Id}")">@device.DisplayName</a></h2>
                         <button class="link-button" @onclick="() => BeginRename(device)">Rename</button>
                     }
-                    <p>@(device.CurrentIpAddress ?? "No current IP") · @(device.MacAddress ?? "No MAC")</p>
+                    <p>@(device.CurrentIpAddress ?? "No current IP") · @(device.MacAddress ?? "No MAC") · @device.Type</p>
                 </div>
                 <div class="device-state">
                     <span class="@(device.IsOnline ? "online" : "offline")">@(device.IsOnline ? "Online" : "Offline")</span>
                     <span>@(device.IsManual ? "Manual" : "DHCP")</span>
+                    <a href="@($"devices/{device.Id}")">Usage history →</a>
                 </div>
             </article>
         }

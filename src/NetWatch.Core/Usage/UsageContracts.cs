@@ -25,3 +25,16 @@ public sealed record DeviceUsageResponse(
     string DisplayName,
     UsageTotalsResponse Totals);
 
+public sealed record UsageHistoryPointResponse(
+    DateTimeOffset FromUtc,
+    DateTimeOffset ToUtc,
+    string Label,
+    UsageTotalsResponse Totals);
+
+public sealed record UsageHistoryResponse(
+    DateTimeOffset FromUtc,
+    DateTimeOffset ToUtc,
+    string TimeZone,
+    string Grouping,
+    string? DeviceId,
+    IReadOnlyList<UsageHistoryPointResponse> Points);
