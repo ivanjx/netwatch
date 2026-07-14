@@ -301,6 +301,7 @@ else if (_summary is not null)
         finally
         {
             _loadLock.Release();
+            StateHasChanged();
         }
     }
 
