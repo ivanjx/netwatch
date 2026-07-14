@@ -12,10 +12,6 @@
         <h1>Dashboard</h1>
         <p>Network usage captured from your MikroTik router.</p>
     </div>
-    @if (_summary is not null)
-    {
-        <span class="sync-note"><AppIcon Name="status" />Updated @RelativeTime(_summary.GeneratedAtUtc)</span>
-    }
 </div>
 
 @if (_loading)
@@ -326,9 +322,4 @@ else if (_summary is not null)
 
     private string Share(long total) => PeriodTotal == 0 ? "0%" : $"{total * 100d / PeriodTotal:0.#}%";
 
-    private static string RelativeTime(DateTimeOffset value)
-    {
-        var age = DateTimeOffset.UtcNow - value;
-        return age.TotalMinutes < 1 ? "just now" : $"{Math.Max(1, (int)age.TotalMinutes)} min ago";
-    }
 }
