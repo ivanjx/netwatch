@@ -20,14 +20,15 @@ internal sealed class LiveTrafficTracker(
         var duration = lastSeenAtUtc - firstSeenAtUtc;
         if (duration < _options.LiveSampleInterval)
         {
-            duration = _options.LiveSampleInterval;
+            firstSeenAtUtc = lastSeenAtUtc.Subtract(_options.LiveSampleInterval);
         }
 
-        var durationSeconds = duration.TotalSeconds;
         var observation = new LiveTrafficObservation(
             _timeProvider.GetUtcNow(),
-            ToBitsPerSecond(uploadBytes, durationSeconds),
-            ToBitsPerSecond(downloadBytes, durationSeconds));
+            firstSeenAtUtc,
+            lastSeenAtUtc,
+            uploadBytes,
+            downloadBytes);
 
         lock (_sync)
         {
@@ -55,14 +56,39 @@ internal sealed class LiveTrafficTracker(
                 if (observations.Count == 0)
                 {
                     _observations.Remove(deviceId);
-                    continue;
+                }
+            }
+
+            if (_observations.Count > 0)
+            {
+                var allObservations = _observations.Values.SelectMany(item => item).ToArray();
+                var windowEndUtc = allObservations.Max(observation => observation.LastSeenAtUtc);
+                var windowStartUtc = windowEndUtc.Subtract(_options.LiveIdleTimeout);
+                var earliestObservationUtc = allObservations.Min(observation => observation.FirstSeenAtUtc);
+                if (earliestObservationUtc > windowStartUtc)
+                {
+                    windowStartUtc = earliestObservationUtc;
                 }
 
-                devices.Add(new DeviceLiveTrafficResponse(
-                    deviceId,
-                    new LiveTrafficRateResponse(
-                        observations.Sum(observation => observation.UploadBitsPerSecond),
-                        observations.Sum(observation => observation.DownloadBitsPerSecond))));
+                var windowDurationSeconds = (windowEndUtc - windowStartUtc).TotalSeconds;
+                foreach (var (deviceId, observations) in _observations)
+                {
+                    devices.Add(new DeviceLiveTrafficResponse(
+                        deviceId,
+                        new LiveTrafficRateResponse(
+                            ToBitsPerSecond(
+                                observations,
+                                observation => observation.UploadBytes,
+                                windowStartUtc,
+                                windowEndUtc,
+                                windowDurationSeconds),
+                            ToBitsPerSecond(
+                                observations,
+                                observation => observation.DownloadBytes,
+                                windowStartUtc,
+                                windowEndUtc,
+                                windowDurationSeconds))));
+                }
             }
         }
 
@@ -77,11 +103,39 @@ internal sealed class LiveTrafficTracker(
             devices);
     }
 
-    private static long ToBitsPerSecond(long bytes, double durationSeconds) =>
-        (long)Math.Round(bytes * 8d / durationSeconds, MidpointRounding.AwayFromZero);
+    private static long ToBitsPerSecond(
+        IReadOnlyList<LiveTrafficObservation> observations,
+        Func<LiveTrafficObservation, long> selectBytes,
+        DateTimeOffset windowStartUtc,
+        DateTimeOffset windowEndUtc,
+        double windowDurationSeconds)
+    {
+        var bits = 0d;
+        foreach (var observation in observations)
+        {
+            var overlapStartUtc = observation.FirstSeenAtUtc > windowStartUtc ?
+                observation.FirstSeenAtUtc :
+                windowStartUtc;
+            var overlapEndUtc = observation.LastSeenAtUtc < windowEndUtc ?
+                observation.LastSeenAtUtc :
+                windowEndUtc;
+            if (overlapEndUtc <= overlapStartUtc)
+            {
+                continue;
+            }
+
+            var observationDurationTicks = (observation.LastSeenAtUtc - observation.FirstSeenAtUtc).Ticks;
+            var overlapDurationTicks = (overlapEndUtc - overlapStartUtc).Ticks;
+            bits += selectBytes(observation) * 8d * overlapDurationTicks / observationDurationTicks;
+        }
+
+        return (long)Math.Round(bits / windowDurationSeconds, MidpointRounding.AwayFromZero);
+    }
 
     private sealed record LiveTrafficObservation(
         DateTimeOffset RecordedAtUtc,
-        long UploadBitsPerSecond,
-        long DownloadBitsPerSecond);
+        DateTimeOffset FirstSeenAtUtc,
+        DateTimeOffset LastSeenAtUtc,
+        long UploadBytes,
+        long DownloadBytes);
 }
