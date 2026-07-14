@@ -1,4 +1,5 @@
 @page "/devices/{Id}"
+@implements IAsyncDisposable
 @inject HttpClient _http
 @inject Microsoft.JSInterop.IJSRuntime _js
 @using NetWatch.Core.Diagnostics
@@ -138,6 +139,10 @@ else if (_device is not null)
     private bool _loading = true;
     private bool _historyLoading;
     private bool _clearingUsage;
+    private readonly PeriodicTimer _refreshTimer = new(TimeSpan.FromSeconds(2));
+    private readonly CancellationTokenSource _refreshCancellation = new();
+    private readonly SemaphoreSlim _loadLock = new(1, 1);
+    private Task? _refreshTask;
 
     private string DeviceStatusClass => _device switch
     {
@@ -158,7 +163,26 @@ else if (_device is not null)
 
     protected override async Task OnParametersSetAsync()
     {
-        _loading = true;
+        await _loadLock.WaitAsync();
+        try
+        {
+            await LoadDeviceAsync(showLoading: true, resetRange: true);
+        }
+        finally
+        {
+            _loadLock.Release();
+        }
+
+        _refreshTask ??= RefreshLoopAsync();
+    }
+
+    private async Task LoadDeviceAsync(bool showLoading, bool resetRange)
+    {
+        if (showLoading)
+        {
+            _loading = true;
+        }
+
         _error = null;
         try
         {
@@ -175,9 +199,13 @@ else if (_device is not null)
                 return;
             }
 
-            var reportingToday = _status.CurrentTime.Date;
-            _fromDate = new DateTime(reportingToday.Year, reportingToday.Month, 1);
-            _toDate = reportingToday;
+            if (resetRange)
+            {
+                var reportingToday = _status.CurrentTime.Date;
+                _fromDate = new DateTime(reportingToday.Year, reportingToday.Month, 1);
+                _toDate = reportingToday;
+            }
+
             var todayTask = LoadDeviceTotalsAsync(_summary.Today);
             var weekTask = LoadDeviceTotalsAsync(_summary.Week);
             var monthTask = LoadDeviceTotalsAsync(_summary.Month);
@@ -185,7 +213,7 @@ else if (_device is not null)
             _today = await todayTask;
             _week = await weekTask;
             _month = await monthTask;
-            await LoadHistoryAsync();
+            await LoadHistoryAsync(showLoading);
         }
         catch (HttpRequestException exception)
         {
@@ -195,7 +223,10 @@ else if (_device is not null)
         }
         finally
         {
-            _loading = false;
+            if (showLoading)
+            {
+                _loading = false;
+            }
         }
     }
 
@@ -207,7 +238,9 @@ else if (_device is not null)
         return devices.FirstOrDefault(device => device.DeviceId == Id)?.Totals ?? EmptyTotals;
     }
 
-    private async Task LoadHistoryAsync()
+    private Task LoadHistoryAsync() => LoadHistoryAsync(showLoading: true);
+
+    private async Task LoadHistoryAsync(bool showLoading)
     {
         _rangeError = null;
         if (_fromDate > _toDate)
@@ -223,7 +256,11 @@ else if (_device is not null)
             return;
         }
 
-        _historyLoading = true;
+        if (showLoading)
+        {
+            _historyLoading = true;
+        }
+
         try
         {
             var from = _fromDate.ToString("yyyy-MM-dd");
@@ -238,7 +275,41 @@ else if (_device is not null)
         }
         finally
         {
-            _historyLoading = false;
+            if (showLoading)
+            {
+                _historyLoading = false;
+            }
+        }
+    }
+
+    private async Task RefreshLoopAsync()
+    {
+        try
+        {
+            while (await _refreshTimer.WaitForNextTickAsync(_refreshCancellation.Token))
+            {
+                await InvokeAsync(RefreshAsync);
+            }
+        }
+        catch (OperationCanceledException) when (_refreshCancellation.IsCancellationRequested)
+        {
+        }
+    }
+
+    private async Task RefreshAsync()
+    {
+        if (!await _loadLock.WaitAsync(0))
+        {
+            return;
+        }
+
+        try
+        {
+            await LoadDeviceAsync(showLoading: false, resetRange: false);
+        }
+        finally
+        {
+            _loadLock.Release();
         }
     }
 
@@ -286,4 +357,18 @@ else if (_device is not null)
 
     private static string Split(UsageTotalsResponse totals) =>
         $"{Helpers.Bytes(totals.DownloadBytes)} down · {Helpers.Bytes(totals.UploadBytes)} up";
+
+    public async ValueTask DisposeAsync()
+    {
+        await _refreshCancellation.CancelAsync();
+        _refreshTimer.Dispose();
+
+        if (_refreshTask is not null)
+        {
+            await _refreshTask;
+        }
+
+        _refreshCancellation.Dispose();
+        _loadLock.Dispose();
+    }
 }
