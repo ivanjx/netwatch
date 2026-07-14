@@ -2,9 +2,29 @@ name: Build
 
 on:
   pull_request:
+    paths:
+      - src/**
+      - tests/**
+      - NetWatch.slnx
+      - Dockerfile
+      - .dockerignore
+      - Directory.Build.*
+      - Directory.Packages.props
+      - global.json
+      - NuGet.config
   push:
     branches:
       - master
+    paths:
+      - src/**
+      - tests/**
+      - NetWatch.slnx
+      - Dockerfile
+      - .dockerignore
+      - Directory.Build.*
+      - Directory.Packages.props
+      - global.json
+      - NuGet.config
   workflow_dispatch:
 
 permissions:
