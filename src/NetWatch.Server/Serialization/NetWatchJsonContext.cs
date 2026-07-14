@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using NetWatch.Core.Diagnostics;
 using NetWatch.Core.Devices;
 using NetWatch.Core.Usage;
+using NetWatch.Core.Live;
 using NetWatch.Server.MikroTik;
 
 namespace NetWatch.Server.Serialization;
@@ -29,4 +30,8 @@ namespace NetWatch.Server.Serialization;
 [JsonSerializable(typeof(UsageHistoryPointResponse))]
 [JsonSerializable(typeof(IReadOnlyList<UsageHistoryPointResponse>))]
 [JsonSerializable(typeof(UsageHistoryResponse))]
+[JsonSerializable(typeof(LiveTrafficRateResponse))]
+[JsonSerializable(typeof(DeviceLiveTrafficResponse))]
+[JsonSerializable(typeof(IReadOnlyList<DeviceLiveTrafficResponse>))]
+[JsonSerializable(typeof(LiveTrafficSnapshotResponse))]
 internal sealed partial class NetWatchJsonContext : JsonSerializerContext;

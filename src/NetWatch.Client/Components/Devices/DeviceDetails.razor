@@ -4,6 +4,7 @@
 @inject Microsoft.JSInterop.IJSRuntime _js
 @using NetWatch.Core.Diagnostics
 @using NetWatch.Core.Devices
+@using NetWatch.Core.Live
 @using NetWatch.Core.Usage
 
 <PageTitle>@(_device?.DisplayName ?? "Device") — NetWatch</PageTitle>
@@ -47,6 +48,7 @@ else if (_device is not null)
         <UsageStatCard Label="Today" PrimaryBytes="@Total(_today)" Detail="@Split(_today)" Icon="activity" />
         <UsageStatCard Label="This week" PrimaryBytes="@Total(_week)" Detail="@Split(_week)" Icon="activity" AccentClass="accent-violet" />
         <UsageStatCard Label="This month" PrimaryBytes="@Total(_month)" Detail="@Split(_month)" Icon="activity" AccentClass="accent-green" />
+        <UsageStatCard Label="Current speed" Value="@Helpers.BitsPerSecond(CurrentSpeed)" Detail="@CurrentSpeedDetail" Icon="online" AccentClass="accent-amber" />
     </section>
 
     <div class="detail-grid">
@@ -131,6 +133,7 @@ else if (_device is not null)
     private UsageTotalsResponse _week = EmptyTotals;
     private UsageTotalsResponse _month = EmptyTotals;
     private UsageHistoryResponse? _history;
+    private LiveTrafficRateResponse? _liveTraffic;
     private DateTime _fromDate;
     private DateTime _toDate;
     private string? _error;
@@ -160,6 +163,11 @@ else if (_device is not null)
 
     private static UsageTotalsResponse EmptyTotals => new(0, 0, 0, 0);
     private long HistoryTotal => _history?.Points.Sum(point => point.Totals.DownloadBytes + point.Totals.UploadBytes) ?? 0;
+    private long CurrentSpeed =>
+        (_liveTraffic?.DownloadBitsPerSecond ?? 0) + (_liveTraffic?.UploadBitsPerSecond ?? 0);
+    private string CurrentSpeedDetail =>
+        $"{Helpers.BitsPerSecond(_liveTraffic?.DownloadBitsPerSecond ?? 0)} down · " +
+        $"{Helpers.BitsPerSecond(_liveTraffic?.UploadBitsPerSecond ?? 0)} up";
 
     protected override async Task OnParametersSetAsync()
     {
@@ -189,10 +197,13 @@ else if (_device is not null)
             var deviceTask = _http.GetFromJsonAsync<DeviceDetailsResponse>($"api/devices/{Uri.EscapeDataString(Id)}");
             var summaryTask = _http.GetFromJsonAsync<UsageSummaryResponse>("api/usage/summary");
             var statusTask = _http.GetFromJsonAsync<SystemStatusResponse>("api/status");
-            await Task.WhenAll(deviceTask, summaryTask, statusTask);
+            var liveTrafficTask = _http.GetFromJsonAsync<LiveTrafficSnapshotResponse>("api/live");
+            await Task.WhenAll(deviceTask, summaryTask, statusTask, liveTrafficTask);
             _device = await deviceTask;
             _summary = await summaryTask;
             _status = await statusTask;
+            var liveTraffic = await liveTrafficTask;
+            _liveTraffic = liveTraffic?.Devices.FirstOrDefault(device => device.DeviceId == Id)?.Rate;
             if (_device is null || _summary is null || _status is null)
             {
                 _error = "NetWatch returned an incomplete device record.";

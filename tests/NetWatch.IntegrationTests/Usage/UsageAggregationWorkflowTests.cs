@@ -11,6 +11,7 @@ using NetWatch.Server.Configuration;
 using NetWatch.Server.Data;
 using NetWatch.Server.Devices;
 using NetWatch.Server.FlowCollection;
+using NetWatch.Server.Live;
 using NetWatch.Server.Usage;
 
 namespace NetWatch.IntegrationTests.Usage;
@@ -48,7 +49,8 @@ public sealed class UsageAggregationWorkflowTests
                 connectionFactory,
                 NullLogger<UsageRepository>.Instance);
             var attribution = new DeviceAttributionService(usageRepository);
-            var accumulator = new UsageAccumulator(options, attribution);
+            var liveTrafficTracker = new LiveTrafficTracker(options, TimeProvider.System);
+            var accumulator = new UsageAccumulator(options, attribution, liveTrafficTracker);
 
             await accumulator.AddAsync(
                 CreateFlow("192.168.88.10", "1.1.1.1", 1_000, 10, observedAtUtc),

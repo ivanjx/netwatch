@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 using NetWatch.Core.Diagnostics;
+using NetWatch.Core.Live;
 using NetWatch.Core.Usage;
 using NetWatch.Server.Common;
 using NetWatch.Server.Configuration;
@@ -56,6 +57,14 @@ public sealed class HostedNetFlowPipelineTests
             Assert.Equal(0, usage.Totals.DownloadBytes);
             Assert.Equal(15, usage.Totals.UploadPackets);
             Assert.Equal(0, usage.Totals.DownloadPackets);
+
+            var liveTraffic = Assert.IsType<LiveTrafficSnapshotResponse>(
+                await client.GetFromJsonAsync<LiveTrafficSnapshotResponse>("/api/live"));
+            var deviceLiveTraffic = Assert.Single(liveTraffic.Devices);
+            Assert.Equal(device.Value, deviceLiveTraffic.DeviceId);
+            Assert.Equal(6_000, deviceLiveTraffic.Rate.UploadBitsPerSecond);
+            Assert.Equal(0, deviceLiveTraffic.Rate.DownloadBitsPerSecond);
+            Assert.Equal(deviceLiveTraffic.Rate, liveTraffic.Network);
         }
         finally
         {

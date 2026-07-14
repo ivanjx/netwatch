@@ -1,7 +1,7 @@
 @page "/"
 @implements IAsyncDisposable
 @inject HttpClient _http
-@using NetWatch.Core.Devices
+@using NetWatch.Core.Live
 @using NetWatch.Core.Usage
 
 <PageTitle>Dashboard — NetWatch</PageTitle>
@@ -46,8 +46,8 @@ else if (_summary is not null)
                        Detail="@($"{Helpers.Number(SelectedPeriod.Totals.UploadPackets)} packets")" Icon="upload" AccentClass="accent-violet" />
         <UsageStatCard Label="Total traffic" PrimaryBytes="@(SelectedPeriod.Totals.DownloadBytes + SelectedPeriod.Totals.UploadBytes)"
                        Detail="@PeriodLabel" Icon="activity" AccentClass="accent-green" />
-        <UsageStatCard Label="Online devices" Value="@OnlineDeviceCount.ToString()"
-                       Detail="@($"{_deviceStates.Count} discovered devices")" Icon="online" AccentClass="accent-amber" />
+        <UsageStatCard Label="Current speed" Value="@Helpers.BitsPerSecond(CurrentNetworkSpeed)"
+                       Detail="@CurrentNetworkSpeedDetail" Icon="online" AccentClass="accent-amber" />
     </section>
 
     <div class="dashboard-grid">
@@ -105,7 +105,7 @@ else if (_summary is not null)
         {
             <div class="table-scroll">
                 <table>
-                    <thead><tr><th>Device</th><th>MAC address</th><th>Download</th><th>Upload</th><th>Total</th><th>Share</th></tr></thead>
+                    <thead><tr><th>Device</th><th>MAC address</th><th>Current speed</th><th>Download</th><th>Upload</th><th>Total</th><th>Share</th></tr></thead>
                     <tbody>
                         @foreach (var device in _deviceUsage)
                         {
@@ -113,6 +113,7 @@ else if (_summary is not null)
                             <tr>
                                 <td><a href="@($"devices/{device.DeviceId}")">@device.DisplayName</a></td>
                                 <td class="mac-address selectable-text">@(device.MacAddress ?? "—")</td>
+                                <td>@Helpers.BitsPerSecond(CurrentSpeed(device.DeviceId))</td>
                                 <td class="download-value">@Helpers.Bytes(device.Totals.DownloadBytes)</td>
                                 <td class="upload-value">@Helpers.Bytes(device.Totals.UploadBytes)</td>
                                 <td>@Helpers.Bytes(total)</td>
@@ -129,8 +130,8 @@ else if (_summary is not null)
 @code {
     private UsageSummaryResponse? _summary;
     private UsageHistoryResponse? _history;
+    private LiveTrafficSnapshotResponse? _liveTraffic;
     private List<DeviceUsageResponse> _deviceUsage = [];
-    private List<DeviceSummaryResponse> _deviceStates = [];
     private string _selectedPeriod = "today";
     private string? _error;
     private bool _loading = true;
@@ -158,8 +159,13 @@ else if (_summary is not null)
     private string TodayPeriodClass => PeriodClass("today");
     private string WeekPeriodClass => PeriodClass("week");
     private string MonthPeriodClass => PeriodClass("month");
-    private int OnlineDeviceCount => _deviceStates.Count(device => device.IsOnline);
     private long PeriodTotal => SelectedPeriod.Totals.DownloadBytes + SelectedPeriod.Totals.UploadBytes;
+    private long CurrentNetworkSpeed =>
+        (_liveTraffic?.Network.DownloadBitsPerSecond ?? 0) +
+        (_liveTraffic?.Network.UploadBitsPerSecond ?? 0);
+    private string CurrentNetworkSpeedDetail =>
+        $"{Helpers.BitsPerSecond(_liveTraffic?.Network.DownloadBitsPerSecond ?? 0)} down · " +
+        $"{Helpers.BitsPerSecond(_liveTraffic?.Network.UploadBitsPerSecond ?? 0)} up";
 
     protected override async Task OnInitializedAsync()
     {
@@ -190,11 +196,7 @@ else if (_summary is not null)
         _error = null;
         try
         {
-            var summaryTask = _http.GetFromJsonAsync<UsageSummaryResponse>("api/usage/summary");
-            var devicesTask = _http.GetFromJsonAsync<List<DeviceSummaryResponse>>("api/devices");
-            await Task.WhenAll(summaryTask, devicesTask);
-            _summary = await summaryTask;
-            _deviceStates = await devicesTask ?? [];
+            _summary = await _http.GetFromJsonAsync<UsageSummaryResponse>("api/usage/summary");
             if (_summary is null)
             {
                 _error = "The usage service returned no data.";
@@ -256,9 +258,11 @@ else if (_summary is not null)
                 $"api/usage/history?from={from}&to={to}&grouping={grouping}");
             var devicesTask = _http.GetFromJsonAsync<List<DeviceUsageResponse>>(
                 $"api/usage/devices?from={from}&to={to}");
-            await Task.WhenAll(historyTask, devicesTask);
+            var liveTrafficTask = _http.GetFromJsonAsync<LiveTrafficSnapshotResponse>("api/live");
+            await Task.WhenAll(historyTask, devicesTask, liveTrafficTask);
             _history = await historyTask;
             _deviceUsage = await devicesTask ?? [];
+            _liveTraffic = await liveTrafficTask;
         }
         catch (HttpRequestException)
         {
@@ -322,5 +326,11 @@ else if (_summary is not null)
     private string PeriodClass(string period) => _selectedPeriod == period ? "active" : string.Empty;
 
     private string Share(long total) => PeriodTotal == 0 ? "0%" : $"{total * 100d / PeriodTotal:0.#}%";
+
+    private long CurrentSpeed(string deviceId)
+    {
+        var rate = _liveTraffic?.Devices.FirstOrDefault(device => device.DeviceId == deviceId)?.Rate;
+        return (rate?.DownloadBitsPerSecond ?? 0) + (rate?.UploadBitsPerSecond ?? 0);
+    }
 
 }

@@ -3,12 +3,14 @@ using System.Net;
 
 using NetWatch.Server.Configuration;
 using NetWatch.Server.FlowCollection;
+using NetWatch.Server.Live;
 
 namespace NetWatch.Server.Usage;
 
 internal sealed class UsageAccumulator(
     NetWatchOptions _options,
-    DeviceAttributionService _attributionService)
+    DeviceAttributionService _attributionService,
+    LiveTrafficTracker _liveTrafficTracker)
 {
     private readonly Dictionary<UsageKey, UsageDelta> _attributed = [];
     private readonly Dictionary<UnresolvedUsageKey, UnresolvedUsageDelta> _unresolved = [];
@@ -41,6 +43,30 @@ internal sealed class UsageAccumulator(
         var category = sourceIsLan && destinationIsLan ?
             UsageCategories.InternalRouted :
             UsageCategories.Internet;
+
+        if (category == UsageCategories.Internet)
+        {
+            if (sourceDeviceId is not null)
+            {
+                _liveTrafficTracker.Record(
+                    sourceDeviceId,
+                    flow.ByteCount,
+                    0,
+                    flow.FirstSeenAtUtc,
+                    observedAtUtc);
+            }
+
+            if (destinationDeviceId is not null)
+            {
+                _liveTrafficTracker.Record(
+                    destinationDeviceId,
+                    0,
+                    flow.ByteCount,
+                    flow.FirstSeenAtUtc,
+                    observedAtUtc);
+            }
+        }
+
         var hourStartUtc = new DateTimeOffset(
             observedAtUtc.Year,
             observedAtUtc.Month,
