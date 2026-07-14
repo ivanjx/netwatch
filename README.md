@@ -25,6 +25,10 @@ It collects NetFlow v5 traffic, discovers devices from RouterOS DHCP leases, and
    add dst-address=192.168.88.2 port=2055 version=5
    ```
 
+For more responsive live traffic updates, reduce the MikroTik `active-flow-timeout` and
+`inactive-flow-timeout` to `5s` or `10s`. Shorter timeouts increase the number of exported
+flow records and may add load to the router.
+
 2. Add `docker-compose.yml`:
 
    ```yaml
@@ -67,6 +71,8 @@ For now it is highly recommended to use proxy level authentication as this proje
 | `NETFLOW_ALLOWED_EXPORTERS` | — | Comma-separated router IPs allowed to submit flows; allows any exporter when unset. |
 | `IGNORED_NETWORKS` | — | Comma-separated CIDR networks to discard; ignores none when unset. |
 | `USAGE_FLUSH_INTERVAL_SECONDS` | `5` | How often collected usage is written to SQLite. |
+| `LIVE_SAMPLE_INTERVAL_SECONDS` | `2` | Minimum flow duration, from `1` to `60` seconds, used when calculating live rates. |
+| `LIVE_IDLE_TIMEOUT_SECONDS` | `15` | How long, from `1` to `3600` seconds, live observations remain visible after their last flow export. |
 | `MIKROTIK_BASE_URL` | — | DHCP sync: RouterOS REST base URL; disables sync when unset. |
 | `MIKROTIK_USERNAME` | — | DHCP sync: RouterOS REST username; omits authentication when unset. |
 | `MIKROTIK_PASSWORD` | — | DHCP sync: RouterOS REST password; ignored when the username is unset. |
