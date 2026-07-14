@@ -10,6 +10,7 @@ internal sealed class NetFlowProcessingWorker(
     UsageAccumulator _accumulator,
     UsageRepository _repository,
     UnresolvedUsageReconciler _reconciler,
+    UsageMutationLock _usageMutationLock,
     NetWatchOptions _options,
     ILogger<NetFlowProcessingWorker> _logger) : BackgroundService
 {
@@ -68,22 +69,30 @@ internal sealed class NetFlowProcessingWorker(
 
     private async Task FlushAndReconcileAsync(CancellationToken cancellationToken)
     {
-        var batch = _accumulator.GetBatch();
-        var result = await _repository.FlushAsync(
-            batch,
-            _diagnostics.GetSnapshot(),
-            DateTimeOffset.UtcNow,
-            cancellationToken);
-        if (result is UsageWriteRepositoryResult)
+        await _usageMutationLock.WaitAsync(cancellationToken);
+        try
         {
-            _accumulator.Clear();
-        }
-        else if (result is ErrorRepositoryResult)
-        {
-            _logger.LogWarning("Usage aggregates remain queued after a failed flush");
-            return;
-        }
+            var batch = _accumulator.GetBatch();
+            var result = await _repository.FlushAsync(
+                batch,
+                _diagnostics.GetSnapshot(),
+                DateTimeOffset.UtcNow,
+                cancellationToken);
+            if (result is UsageWriteRepositoryResult)
+            {
+                _accumulator.Clear();
+            }
+            else if (result is ErrorRepositoryResult)
+            {
+                _logger.LogWarning("Usage aggregates remain queued after a failed flush");
+                return;
+            }
 
-        await _reconciler.ReconcileAsync(cancellationToken);
+            await _reconciler.ReconcileAsync(cancellationToken);
+        }
+        finally
+        {
+            _usageMutationLock.Release();
+        }
     }
 }

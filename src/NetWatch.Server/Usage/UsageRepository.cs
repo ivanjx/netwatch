@@ -250,6 +250,7 @@ internal sealed class UsageRepository(
                 $"""
                 SELECT d.id,
                        COALESCE(d.friendly_name, d.discovered_name, d.mac_address, d.current_ip_address, 'Unnamed device'),
+                       d.mac_address,
                        COALESCE(SUM(u.upload_bytes), 0), COALESCE(SUM(u.download_bytes), 0),
                        COALESCE(SUM(u.upload_packets), 0), COALESCE(SUM(u.download_packets), 0)
                 FROM devices d
@@ -270,7 +271,8 @@ internal sealed class UsageRepository(
                 devices.Add(new DeviceUsageResponse(
                     reader.GetString(0),
                     reader.GetString(1),
-                    ReadTotals(reader, 2)));
+                    reader.IsDBNull(2) ? null : reader.GetString(2),
+                    ReadTotals(reader, 3)));
             }
 
             return new RepositoryResult<IReadOnlyList<DeviceUsageResponse>>(devices);
@@ -363,6 +365,60 @@ internal sealed class UsageRepository(
         catch (Exception exception)
         {
             return LogError(exception, "Failed to read usage diagnostics");
+        }
+    }
+
+    public async Task<RepositoryResult> ClearDeviceAsync(
+        string deviceId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandText = "DELETE FROM usage_hourly WHERE device_id = $deviceId;";
+            command.Parameters.AddWithValue("$deviceId", deviceId);
+            await command.ExecuteNonQueryAsync(cancellationToken);
+            return new UsageWriteRepositoryResult();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return LogError(exception, "Failed to clear device usage history");
+        }
+    }
+
+    public async Task<RepositoryResult> ClearAllAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+            await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+            await ExecuteAsync(
+                connection,
+                (SqliteTransaction)transaction,
+                "DELETE FROM usage_hourly;",
+                [],
+                cancellationToken);
+            await ExecuteAsync(
+                connection,
+                (SqliteTransaction)transaction,
+                "DELETE FROM unresolved_usage;",
+                [],
+                cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return new UsageWriteRepositoryResult();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return LogError(exception, "Failed to clear all usage history");
         }
     }
 

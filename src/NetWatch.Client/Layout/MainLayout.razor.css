@@ -6,11 +6,13 @@
 }
 
 .sidebar {
+    align-self: start;
     background: linear-gradient(180deg, #071322 0%, #081627 60%, #07121f 100%);
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    box-sizing: border-box;
+    height: 100vh;
     padding: 1.15rem 0.75rem;
     position: sticky;
     top: 0;
@@ -29,38 +31,18 @@
 }
 
 .brand-mark {
-    height: 1.7rem;
-    position: relative;
-    width: 2.1rem;
+    align-items: center;
+    color: var(--blue);
+    display: inline-flex;
+    height: 1.9rem;
+    justify-content: center;
+    width: 2.25rem;
 }
 
-.brand-mark::before,
-.brand-mark::after,
-.brand-mark i {
-    background: var(--blue);
-    border-radius: 1rem;
-    content: "";
-    display: block;
-    height: 0.16rem;
-    position: absolute;
-    top: 0.78rem;
-}
-
-.brand-mark::before {
-    left: 0;
-    width: 0.55rem;
-}
-
-.brand-mark i {
-    box-shadow: 0.32rem -0.7rem 0 -0.02rem var(--blue), 0.64rem 0.63rem 0 -0.02rem var(--blue);
-    left: 0.45rem;
-    transform: rotate(-67deg);
-    width: 1rem;
-}
-
-.brand-mark::after {
-    right: 0;
-    width: 0.58rem;
+.brand-mark ::deep .app-icon {
+    height: 100%;
+    stroke-width: 2.1;
+    width: 100%;
 }
 
 nav {
@@ -68,32 +50,47 @@ nav {
     gap: 0.35rem;
 }
 
-nav a {
+nav ::deep a {
     align-items: center;
     border: 1px solid transparent;
-    border-radius: 0.5rem;
+    border-radius: 0.55rem;
     color: var(--text-muted);
     display: flex;
+    font-size: 0.88rem;
+    font-weight: 600;
     gap: 0.7rem;
-    padding: 0.7rem 0.75rem;
+    line-height: 1.2;
+    min-height: 2.75rem;
+    padding: 0.7rem 0.8rem;
     text-decoration: none;
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
-nav a:hover {
-    background: rgb(255 255 255 / 3%);
-    color: var(--text);
+nav ::deep a:hover {
+    background: rgb(101 168 255 / 7%);
+    border-color: rgb(101 168 255 / 10%);
+    color: var(--text-strong);
 }
 
-nav a.active {
-    background: linear-gradient(90deg, rgb(29 103 223 / 28%), rgb(27 83 178 / 16%));
-    border-color: rgb(67 137 255 / 26%);
+nav ::deep a.active {
+    background: linear-gradient(90deg, rgb(29 103 223 / 25%), rgb(27 83 178 / 10%));
+    border-color: rgb(67 137 255 / 24%);
+    box-shadow: inset 3px 0 0 var(--blue);
     color: #eef6ff;
 }
 
-.nav-symbol {
+nav ::deep a:hover .nav-symbol,
+nav ::deep a.active .nav-symbol {
     color: var(--blue-light);
-    font-size: 1.05rem;
-    text-align: center;
+}
+
+.nav-symbol {
+    align-items: center;
+    color: var(--text-subtle);
+    display: inline-flex;
+    font-size: 1.1rem;
+    justify-content: center;
+    transition: color 120ms ease;
     width: 1.2rem;
 }
 
@@ -113,12 +110,10 @@ nav a.active {
     margin: 0 0 0.3rem;
 }
 
-.sidebar-status i,
-.phase-badge i {
-    background: var(--green);
-    border-radius: 50%;
-    height: 0.45rem;
-    width: 0.45rem;
+.sidebar-status ::deep .app-icon,
+.phase-badge ::deep .app-icon {
+    height: 0.55rem;
+    width: 0.55rem;
 }
 
 .sidebar-status span {
@@ -178,7 +173,7 @@ nav a.active {
         border-right: 0;
         display: grid;
         grid-template-columns: auto 1fr;
-        min-height: auto;
+        height: auto;
         padding: 0.65rem 0.8rem;
         position: static;
     }
@@ -196,7 +191,8 @@ nav a.active {
         justify-content: flex-end;
     }
 
-    nav a {
+    nav ::deep a {
+        min-height: 2.35rem;
         padding: 0.5rem 0.65rem;
     }
 

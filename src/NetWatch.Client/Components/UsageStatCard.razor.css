@@ -21,10 +21,15 @@
     border-radius: 50%;
     color: var(--blue);
     display: inline-flex;
-    font-size: 1.25rem;
     height: 2.2rem;
     justify-content: center;
     width: 2.2rem;
+}
+
+.stat-card__mark ::deep .app-icon {
+    height: 1.2rem;
+    stroke-width: 2;
+    width: 1.2rem;
 }
 
 .stat-card strong {

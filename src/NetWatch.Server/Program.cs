@@ -38,8 +38,10 @@ builder.Services.AddSingleton<NetFlowPacketProcessor>();
 builder.Services.AddSingleton<UsageRepository>();
 builder.Services.AddSingleton<DeviceAttributionService>();
 builder.Services.AddSingleton<UsageAccumulator>();
+builder.Services.AddSingleton<UsageMutationLock>();
 builder.Services.AddSingleton<UnresolvedUsageReconciler>();
 builder.Services.AddSingleton<UsageService>();
+builder.Services.AddSingleton<UsageClearService>();
 builder.Services.AddSingleton<CollectorDiagnosticsService>();
 builder.Services.AddHostedService<DhcpSynchronizationWorker>();
 builder.Services.AddHostedService<NetFlowUdpListener>();
@@ -63,6 +65,8 @@ app.MapPost("/api/devices/manual", DeviceHandlers.CreateManualAsync);
 app.MapGet("/api/usage/summary", UsageHandlers.GetSummaryAsync);
 app.MapGet("/api/usage/devices", UsageHandlers.GetDevicesAsync);
 app.MapGet("/api/usage/history", UsageHandlers.GetHistoryAsync);
+app.MapDelete("/api/usage/devices/{id}", UsageHandlers.ClearDeviceAsync);
+app.MapDelete("/api/usage", UsageHandlers.ClearAllAsync);
 
 app.MapFallbackToFile("index.html");
 

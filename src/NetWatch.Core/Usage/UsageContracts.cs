@@ -23,6 +23,7 @@ public sealed record UsageSummaryResponse(
 public sealed record DeviceUsageResponse(
     string DeviceId,
     string DisplayName,
+    string? MacAddress,
     UsageTotalsResponse Totals);
 
 public sealed record UsageHistoryPointResponse(

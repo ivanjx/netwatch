@@ -53,6 +53,18 @@ a:hover {
     color: #93c2ff;
 }
 
+.app-icon {
+    display: block;
+    flex: 0 0 auto;
+    height: 1em;
+    overflow: visible;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
+    width: 1em;
+}
+
 h1 {
     color: var(--text-strong);
     font-size: clamp(1.55rem, 3vw, 2rem);
@@ -87,7 +99,8 @@ textarea {
 }
 
 .primary-button,
-.secondary-button {
+.secondary-button,
+.danger-button {
     align-items: center;
     border-radius: 0.45rem;
     cursor: pointer;
@@ -118,6 +131,17 @@ textarea {
 .secondary-button:hover:not(:disabled) {
     background: rgb(255 255 255 / 5%);
     color: white;
+}
+
+.danger-button {
+    background: rgb(248 103 113 / 8%);
+    border: 1px solid rgb(248 103 113 / 35%);
+    color: #ffadb3;
+}
+
+.danger-button:hover:not(:disabled) {
+    background: rgb(248 103 113 / 15%);
+    color: #ffd4d7;
 }
 
 button:disabled {

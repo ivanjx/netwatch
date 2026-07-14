@@ -3,23 +3,23 @@
 <div class="app-shell">
     <aside class="sidebar">
         <a class="brand" href="" aria-label="NetWatch dashboard">
-            <span class="brand-mark" aria-hidden="true"><i></i></span>
+            <span class="brand-mark" aria-hidden="true"><AppIcon Name="logo" /></span>
             <span>NetWatch</span>
         </a>
 
         <nav aria-label="Primary navigation">
             <NavLink href="" Match="NavLinkMatch.All">
-                <span class="nav-symbol" aria-hidden="true">⌂</span>
+                <span class="nav-symbol" aria-hidden="true"><AppIcon Name="dashboard" /></span>
                 <span>Dashboard</span>
             </NavLink>
             <NavLink href="devices">
-                <span class="nav-symbol" aria-hidden="true">▣</span>
+                <span class="nav-symbol" aria-hidden="true"><AppIcon Name="devices" /></span>
                 <span>Devices</span>
             </NavLink>
         </nav>
 
         <div class="sidebar-status">
-            <p><i></i>Historical monitoring</p>
+            <p><AppIcon Name="status" />Historical monitoring</p>
             <span>RouterOS v7+ · NetFlow v5</span>
         </div>
     </aside>
@@ -27,7 +27,7 @@
     <div class="workspace">
         <header class="topbar">
             <span class="topbar-context">Self-hosted network monitor</span>
-            <span class="phase-badge"><i></i>Historical data</span>
+            <span class="phase-badge"><AppIcon Name="status" />Historical data</span>
         </header>
         <main class="content">
             @Body

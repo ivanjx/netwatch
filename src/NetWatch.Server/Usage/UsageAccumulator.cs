@@ -12,6 +12,7 @@ internal sealed class UsageAccumulator(
 {
     private readonly Dictionary<UsageKey, UsageDelta> _attributed = [];
     private readonly Dictionary<UnresolvedUsageKey, UnresolvedUsageDelta> _unresolved = [];
+    private readonly object _sync = new();
 
     public async Task AddAsync(NormalizedFlow flow, CancellationToken cancellationToken)
     {
@@ -82,12 +83,32 @@ internal sealed class UsageAccumulator(
         }
     }
 
-    public UsageBatch GetBatch() => new(_attributed.Values.ToArray(), _unresolved.Values.ToArray());
+    public UsageBatch GetBatch()
+    {
+        lock (_sync)
+        {
+            return new(_attributed.Values.ToArray(), _unresolved.Values.ToArray());
+        }
+    }
 
     public void Clear()
     {
-        _attributed.Clear();
-        _unresolved.Clear();
+        lock (_sync)
+        {
+            _attributed.Clear();
+            _unresolved.Clear();
+        }
+    }
+
+    public void ClearDevice(string deviceId)
+    {
+        lock (_sync)
+        {
+            foreach (var key in _attributed.Keys.Where(key => key.DeviceId == deviceId).ToArray())
+            {
+                _attributed.Remove(key);
+            }
+        }
     }
 
     private void AddEndpoint(
@@ -103,39 +124,42 @@ internal sealed class UsageAccumulator(
         long uploadPackets,
         long downloadPackets)
     {
-        if (deviceId is not null)
+        lock (_sync)
         {
-            var key = new UsageKey(deviceId, hourStartUtc, category, wanInterface);
-            _attributed.TryGetValue(key, out var existing);
-            _attributed[key] = new UsageDelta(
-                deviceId,
+            if (deviceId is not null)
+            {
+                var key = new UsageKey(deviceId, hourStartUtc, category, wanInterface);
+                _attributed.TryGetValue(key, out var existing);
+                _attributed[key] = new UsageDelta(
+                    deviceId,
+                    hourStartUtc,
+                    category,
+                    wanInterface,
+                    (existing?.UploadBytes ?? 0) + uploadBytes,
+                    (existing?.DownloadBytes ?? 0) + downloadBytes,
+                    (existing?.UploadPackets ?? 0) + uploadPackets,
+                    (existing?.DownloadPackets ?? 0) + downloadPackets);
+                return;
+            }
+
+            var unresolvedKey = new UnresolvedUsageKey(address.ToString(), hourStartUtc, category, wanInterface);
+            _unresolved.TryGetValue(unresolvedKey, out var unresolved);
+            _unresolved[unresolvedKey] = new UnresolvedUsageDelta(
+                address,
                 hourStartUtc,
+                unresolved is null || firstSeenAtUtc < unresolved.FirstSeenAtUtc ?
+                    firstSeenAtUtc :
+                    unresolved.FirstSeenAtUtc,
+                unresolved is null || lastSeenAtUtc > unresolved.LastSeenAtUtc ?
+                    lastSeenAtUtc :
+                    unresolved.LastSeenAtUtc,
                 category,
                 wanInterface,
-                (existing?.UploadBytes ?? 0) + uploadBytes,
-                (existing?.DownloadBytes ?? 0) + downloadBytes,
-                (existing?.UploadPackets ?? 0) + uploadPackets,
-                (existing?.DownloadPackets ?? 0) + downloadPackets);
-            return;
+                (unresolved?.UploadBytes ?? 0) + uploadBytes,
+                (unresolved?.DownloadBytes ?? 0) + downloadBytes,
+                (unresolved?.UploadPackets ?? 0) + uploadPackets,
+                (unresolved?.DownloadPackets ?? 0) + downloadPackets);
         }
-
-        var unresolvedKey = new UnresolvedUsageKey(address.ToString(), hourStartUtc, category, wanInterface);
-        _unresolved.TryGetValue(unresolvedKey, out var unresolved);
-        _unresolved[unresolvedKey] = new UnresolvedUsageDelta(
-            address,
-            hourStartUtc,
-            unresolved is null || firstSeenAtUtc < unresolved.FirstSeenAtUtc ?
-                firstSeenAtUtc :
-                unresolved.FirstSeenAtUtc,
-            unresolved is null || lastSeenAtUtc > unresolved.LastSeenAtUtc ?
-                lastSeenAtUtc :
-                unresolved.LastSeenAtUtc,
-            category,
-            wanInterface,
-            (unresolved?.UploadBytes ?? 0) + uploadBytes,
-            (unresolved?.DownloadBytes ?? 0) + downloadBytes,
-            (unresolved?.UploadPackets ?? 0) + uploadPackets,
-            (unresolved?.DownloadPackets ?? 0) + downloadPackets);
     }
 
     private bool IsIgnored(IPAddress address) => _options.IgnoredNetworks.Any(network => network.Contains(address));
@@ -166,4 +190,3 @@ internal sealed class UsageAccumulator(
         string Category,
         string WanInterface);
 }
-

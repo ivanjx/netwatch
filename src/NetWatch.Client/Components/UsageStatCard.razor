@@ -3,7 +3,7 @@
 <article class="stat-card @AccentClass">
     <div class="stat-card__topline">
         <span>@Label</span>
-        <span class="stat-card__mark" aria-hidden="true">@Mark</span>
+        <span class="stat-card__mark" aria-hidden="true"><AppIcon Name="@Icon" /></span>
     </div>
     <strong>@(Value ?? UsageFormatting.Bytes(PrimaryBytes))</strong>
     <span class="stat-card__detail">@Detail</span>
@@ -14,6 +14,6 @@
     [Parameter] public long PrimaryBytes { get; set; }
     [Parameter] public string? Value { get; set; }
     [Parameter, EditorRequired] public string Detail { get; set; } = string.Empty;
-    [Parameter] public string Mark { get; set; } = "•";
+    [Parameter, EditorRequired] public string Icon { get; set; } = string.Empty;
     [Parameter] public string AccentClass { get; set; } = "accent-blue";
 }

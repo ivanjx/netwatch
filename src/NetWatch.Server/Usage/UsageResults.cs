@@ -13,6 +13,8 @@ internal sealed record DeviceUsageListResult(IReadOnlyList<DeviceUsageResponse> 
 
 internal sealed record UsageHistoryResult(UsageHistoryResponse Value) : SuccessServiceResult;
 
+internal sealed record UsageClearedResult : SuccessServiceResult;
+
 internal sealed record InvalidUsageQueryServiceErrorResult : ErrorServiceResult;
 
 internal sealed record UsageUnavailableServiceErrorResult : ErrorServiceResult;

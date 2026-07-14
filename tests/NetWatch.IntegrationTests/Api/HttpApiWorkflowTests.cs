@@ -36,7 +36,7 @@ public sealed class HttpApiWorkflowTests
                 new CreateManualDeviceRequest(
                     "Office laptop",
                     "192.168.88.10",
-                    null,
+                    "AA:BB:CC:DD:EE:FF",
                     "Client",
                     "HTTP workflow"));
             Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
@@ -84,8 +84,46 @@ public sealed class HttpApiWorkflowTests
                 await client.GetFromJsonAsync<List<DeviceUsageResponse>>(
                     $"/api/usage/devices?from={from}&to={to}&wanInterface=wan1"));
             var deviceUsage = Assert.Single(usage);
+            Assert.Equal("AA:BB:CC:DD:EE:FF", deviceUsage.MacAddress);
             Assert.Equal(4_000, deviceUsage.Totals.UploadBytes);
             Assert.Equal(2_000, deviceUsage.Totals.DownloadBytes);
+
+            using var clearDeviceUsage = await client.DeleteAsync($"/api/usage/devices/{created.Id}");
+            Assert.Equal(HttpStatusCode.NoContent, clearDeviceUsage.StatusCode);
+            usage = Assert.IsType<List<DeviceUsageResponse>>(
+                await client.GetFromJsonAsync<List<DeviceUsageResponse>>(
+                    $"/api/usage/devices?from={from}&to={to}&wanInterface=wan1"));
+            deviceUsage = Assert.Single(usage);
+            Assert.Equal(0, deviceUsage.Totals.UploadBytes);
+            Assert.Equal(0, deviceUsage.Totals.DownloadBytes);
+
+            writeResult = await repository.FlushAsync(
+                new UsageBatch(
+                    [new UsageDelta(
+                        created.Id,
+                        new DateTimeOffset(
+                            observedAtUtc.UtcDateTime.Date.AddHours(observedAtUtc.Hour),
+                            TimeSpan.Zero),
+                        UsageCategories.Internet,
+                        "wan1",
+                        1_000,
+                        500,
+                        10,
+                        5)],
+                    []),
+                diagnostics.GetSnapshot(),
+                observedAtUtc,
+                CancellationToken.None);
+            Assert.IsType<UsageWriteRepositoryResult>(writeResult);
+
+            using var clearAllUsage = await client.DeleteAsync("/api/usage");
+            Assert.Equal(HttpStatusCode.NoContent, clearAllUsage.StatusCode);
+            usage = Assert.IsType<List<DeviceUsageResponse>>(
+                await client.GetFromJsonAsync<List<DeviceUsageResponse>>(
+                    $"/api/usage/devices?from={from}&to={to}&wanInterface=wan1"));
+            deviceUsage = Assert.Single(usage);
+            Assert.Equal(0, deviceUsage.Totals.UploadBytes);
+            Assert.Equal(0, deviceUsage.Totals.DownloadBytes);
 
             using var invalidUsage = await client.GetAsync("/api/usage/summary?timeZone=Not/AZone");
             Assert.Equal(HttpStatusCode.BadRequest, invalidUsage.StatusCode);

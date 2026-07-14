@@ -1,0 +1,53 @@
+<svg class="app-icon @Class"
+     viewBox="0 0 24 24"
+     fill="none"
+     xmlns="http://www.w3.org/2000/svg"
+     aria-hidden="true"
+     focusable="false">
+    @switch (Name)
+    {
+        case "logo":
+            <path d="M2 12h4l2-7 4 14 3-10 2 3h5" />
+            break;
+        case "dashboard":
+            <rect x="3" y="3" width="7" height="7" rx="1.5" />
+            <rect x="14" y="3" width="7" height="7" rx="1.5" />
+            <rect x="3" y="14" width="7" height="7" rx="1.5" />
+            <rect x="14" y="14" width="7" height="7" rx="1.5" />
+            break;
+        case "devices":
+            <rect x="3" y="4" width="18" height="12" rx="2" />
+            <path d="M8 20h8M12 16v4" />
+            break;
+        case "download":
+            <path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" />
+            break;
+        case "upload":
+            <path d="M12 15V3m0 0 4 4m-4-4L8 7M5 21h14" />
+            break;
+        case "activity":
+            <path d="M3 12h4l2-6 4 12 3-8 2 2h3" />
+            break;
+        case "online":
+            <path d="M5.6 9.6a9 9 0 0 1 12.8 0M8.5 12.5a5 5 0 0 1 7 0M12 17h.01" />
+            break;
+        case "alert":
+            <path d="M10.3 4.2 2.9 17a2 2 0 0 0 1.7 3h14.8a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z" />
+            <path d="M12 9v4m0 3h.01" />
+            break;
+        case "arrow-left":
+            <path d="m15 18-6-6 6-6" />
+            break;
+        case "arrow-right":
+            <path d="m9 18 6-6-6-6" />
+            break;
+        case "status":
+            <circle cx="12" cy="12" r="9" fill="currentColor" stroke="none" />
+            break;
+    }
+</svg>
+
+@code {
+    [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+    [Parameter] public string? Class { get; set; }
+}

@@ -40,11 +40,23 @@ internal static class UsageHandlers
             request.Query["wanInterface"],
             cancellationToken));
 
+    public static async Task<IResult> ClearDeviceAsync(
+        string id,
+        UsageClearService service,
+        CancellationToken cancellationToken) =>
+        Map(await service.ClearDeviceAsync(id, cancellationToken));
+
+    public static async Task<IResult> ClearAllAsync(
+        UsageClearService service,
+        CancellationToken cancellationToken) =>
+        Map(await service.ClearAllAsync(cancellationToken));
+
     private static IResult Map(ServiceResult result) => result switch
     {
         UsageSummaryResult success => Results.Ok(success.Value),
         DeviceUsageListResult success => Results.Ok(success.Value),
         UsageHistoryResult success => Results.Ok(success.Value),
+        UsageClearedResult => Results.NoContent(),
         InvalidUsageQueryServiceErrorResult => Results.Problem(
             statusCode: StatusCodes.Status400BadRequest),
         UsageUnavailableServiceErrorResult => Results.Problem(

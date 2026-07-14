@@ -1,5 +1,6 @@
 @page "/devices/{Id}"
 @inject HttpClient _http
+@inject Microsoft.JSInterop.IJSRuntime _js
 @using NetWatch.Core.Devices
 @using NetWatch.Core.Usage
 
@@ -21,19 +22,29 @@ else if (_device is not null)
 {
     <div class="page-heading">
         <div>
-            <a class="back-link" href="devices">← Devices</a>
+            <a class="back-link" href="devices"><AppIcon Name="arrow-left" />Devices</a>
             <h1>@_device.DisplayName</h1>
             <p>@(_device.DiscoveredName ?? "Manually managed device")</p>
         </div>
-        <span class="status-pill @(_device.IsOnline ? "online" : "offline")">
-            <i></i>@(_device.IsOnline ? "Online" : "Offline")
-        </span>
+        <div class="heading-actions">
+            <span class="status-pill @DeviceStatusClass">
+                <AppIcon Name="status" />@DeviceStatusLabel
+            </span>
+            <button class="danger-button" disabled="@_clearingUsage" @onclick="ClearUsageAsync">
+                @(_clearingUsage ? "Clearing…" : "Clear usage history")
+            </button>
+        </div>
     </div>
 
+    @if (_usageError is not null)
+    {
+        <p class="range-error" role="alert">@_usageError</p>
+    }
+
     <section class="stat-grid" aria-label="Device period totals">
-        <UsageStatCard Label="Today" PrimaryBytes="@Total(_today)" Detail="@Split(_today)" Mark="1" />
-        <UsageStatCard Label="This week" PrimaryBytes="@Total(_week)" Detail="@Split(_week)" Mark="7" AccentClass="accent-violet" />
-        <UsageStatCard Label="This month" PrimaryBytes="@Total(_month)" Detail="@Split(_month)" Mark="30" AccentClass="accent-green" />
+        <UsageStatCard Label="Today" PrimaryBytes="@Total(_today)" Detail="@Split(_today)" Icon="activity" />
+        <UsageStatCard Label="This week" PrimaryBytes="@Total(_week)" Detail="@Split(_week)" Icon="activity" AccentClass="accent-violet" />
+        <UsageStatCard Label="This month" PrimaryBytes="@Total(_month)" Detail="@Split(_month)" Icon="activity" AccentClass="accent-green" />
     </section>
 
     <div class="detail-grid">
@@ -121,8 +132,24 @@ else if (_device is not null)
     private DateTime _toDate;
     private string? _error;
     private string? _rangeError;
+    private string? _usageError;
     private bool _loading = true;
     private bool _historyLoading;
+    private bool _clearingUsage;
+
+    private string DeviceStatusClass => _device switch
+    {
+        { IsManual: true } => "static",
+        { IsOnline: true } => "online",
+        _ => "offline"
+    };
+
+    private string DeviceStatusLabel => _device switch
+    {
+        { IsManual: true } => "Static",
+        { IsOnline: true } => "Online",
+        _ => "Offline"
+    };
 
     private static UsageTotalsResponse EmptyTotals => new(0, 0, 0, 0);
     private long HistoryTotal => _history?.Points.Sum(point => point.Totals.DownloadBytes + point.Totals.UploadBytes) ?? 0;
@@ -208,6 +235,46 @@ else if (_device is not null)
         finally
         {
             _historyLoading = false;
+        }
+    }
+
+    private async Task ClearUsageAsync()
+    {
+        var confirmed = await _js.InvokeAsync<bool>(
+            "confirm",
+            [$"Clear all usage history for {_device!.DisplayName}? This cannot be undone."]);
+        if (!confirmed)
+        {
+            return;
+        }
+
+        _clearingUsage = true;
+        _usageError = null;
+        try
+        {
+            using var response = await _http.DeleteAsync($"api/usage/devices/{Uri.EscapeDataString(Id)}");
+            if (!response.IsSuccessStatusCode)
+            {
+                _usageError = "Usage history could not be cleared.";
+                return;
+            }
+
+            var todayTask = LoadDeviceTotalsAsync(_summary!.Today);
+            var weekTask = LoadDeviceTotalsAsync(_summary.Week);
+            var monthTask = LoadDeviceTotalsAsync(_summary.Month);
+            await Task.WhenAll(todayTask, weekTask, monthTask);
+            _today = await todayTask;
+            _week = await weekTask;
+            _month = await monthTask;
+            await LoadHistoryAsync();
+        }
+        catch (HttpRequestException)
+        {
+            _usageError = "Usage history could not be cleared.";
+        }
+        finally
+        {
+            _clearingUsage = false;
         }
     }
 

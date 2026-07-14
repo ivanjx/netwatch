@@ -1,5 +1,6 @@
 @page "/devices"
 @inject HttpClient _http
+@inject Microsoft.JSInterop.IJSRuntime _js
 @using System.Net
 @using System.Net.Http.Json
 @using NetWatch.Core.Devices
@@ -8,12 +9,22 @@
 
 <div class="page-heading">
     <div><p class="eyebrow">Inventory</p><h1>Devices</h1></div>
-    <p>DHCP clients discovered from RouterOS and devices you add manually.</p>
+    <div class="page-actions">
+        <p>DHCP clients discovered from RouterOS and devices you add manually.</p>
+        <button class="danger-button" disabled="@_clearingUsage" @onclick="ClearAllUsageAsync">
+            @(_clearingUsage ? "Clearing…" : "Clear all usage history")
+        </button>
+    </div>
 </div>
 
 @if (_error is not null)
 {
     <p class="error-message" role="alert">@_error</p>
+}
+
+@if (_message is not null)
+{
+    <p class="success-message" role="status">@_message</p>
 }
 
 <section class="manual-device">
@@ -57,9 +68,9 @@ else
                     <p>@(device.CurrentIpAddress ?? "No current IP") · @(device.MacAddress ?? "No MAC") · @device.Type</p>
                 </div>
                 <div class="device-state">
-                    <span class="@(device.IsOnline ? "online" : "offline")">@(device.IsOnline ? "Online" : "Offline")</span>
+                    <span class="@DeviceStatusClass(device)">@DeviceStatusLabel(device)</span>
                     <span>@(device.IsManual ? "Manual" : "DHCP")</span>
-                    <a href="@($"devices/{device.Id}")">Usage history →</a>
+                    <a class="usage-link" href="@($"devices/{device.Id}")">Usage history<AppIcon Name="arrow-right" /></a>
                 </div>
             </article>
         }
@@ -69,6 +80,7 @@ else
 @code {
     private List<DeviceSummaryResponse>? _devices;
     private string? _error;
+    private string? _message;
     private string? _editingId;
     private string? _editName;
     private string _manualName = string.Empty;
@@ -77,6 +89,7 @@ else
     private string _manualType = "Client";
     private string _manualNotes = string.Empty;
     private bool _saving;
+    private bool _clearingUsage;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
@@ -170,6 +183,40 @@ else
         }
     }
 
+    private async Task ClearAllUsageAsync()
+    {
+        var confirmed = await _js.InvokeAsync<bool>(
+            "confirm",
+            ["Clear all usage history for every device? This cannot be undone."]);
+        if (!confirmed)
+        {
+            return;
+        }
+
+        _clearingUsage = true;
+        _error = null;
+        _message = null;
+        try
+        {
+            using var response = await _http.DeleteAsync("api/usage");
+            if (!response.IsSuccessStatusCode)
+            {
+                _error = "Usage history could not be cleared.";
+                return;
+            }
+
+            _message = "Usage history was cleared for all devices.";
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Usage history could not be cleared.";
+        }
+        finally
+        {
+            _clearingUsage = false;
+        }
+    }
+
     private bool ValidateManualDevice()
     {
         var name = _manualName.Trim();
@@ -232,4 +279,18 @@ else
 
         return hexDigitCount == 12;
     }
+
+    private static string DeviceStatusClass(DeviceSummaryResponse device) => device switch
+    {
+        { IsManual: true } => "static",
+        { IsOnline: true } => "online",
+        _ => "offline"
+    };
+
+    private static string DeviceStatusLabel(DeviceSummaryResponse device) => device switch
+    {
+        { IsManual: true } => "Static",
+        { IsOnline: true } => "Online",
+        _ => "Offline"
+    };
 }

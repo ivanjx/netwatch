@@ -1,4 +1,5 @@
 @page "/"
+@implements IAsyncDisposable
 @inject HttpClient _http
 @using NetWatch.Core.Devices
 @using NetWatch.Core.Usage
@@ -13,7 +14,7 @@
     </div>
     @if (_summary is not null)
     {
-        <span class="sync-note"><i></i>Updated @RelativeTime(_summary.GeneratedAtUtc)</span>
+        <span class="sync-note"><AppIcon Name="status" />Updated @RelativeTime(_summary.GeneratedAtUtc)</span>
     }
 </div>
 
@@ -29,7 +30,7 @@
 else if (_error is not null)
 {
     <section class="state-panel error-state" role="alert">
-        <span class="state-icon">!</span>
+        <span class="state-icon"><AppIcon Name="alert" /></span>
         <div><strong>Dashboard data is unavailable</strong><p>@_error</p></div>
         <button class="secondary-button" @onclick="LoadAsync">Try again</button>
     </section>
@@ -44,13 +45,13 @@ else if (_summary is not null)
 
     <section class="stat-grid" aria-label="Network totals">
         <UsageStatCard Label="Total download" PrimaryBytes="@SelectedPeriod.Totals.DownloadBytes"
-                       Detail="@($"{UsageFormatting.Number(SelectedPeriod.Totals.DownloadPackets)} packets")" Mark="↓" />
+                       Detail="@($"{UsageFormatting.Number(SelectedPeriod.Totals.DownloadPackets)} packets")" Icon="download" />
         <UsageStatCard Label="Total upload" PrimaryBytes="@SelectedPeriod.Totals.UploadBytes"
-                       Detail="@($"{UsageFormatting.Number(SelectedPeriod.Totals.UploadPackets)} packets")" Mark="↑" AccentClass="accent-violet" />
+                       Detail="@($"{UsageFormatting.Number(SelectedPeriod.Totals.UploadPackets)} packets")" Icon="upload" AccentClass="accent-violet" />
         <UsageStatCard Label="Total traffic" PrimaryBytes="@(SelectedPeriod.Totals.DownloadBytes + SelectedPeriod.Totals.UploadBytes)"
-                       Detail="@PeriodLabel" Mark="∿" AccentClass="accent-green" />
+                       Detail="@PeriodLabel" Icon="activity" AccentClass="accent-green" />
         <UsageStatCard Label="Online devices" Value="@OnlineDeviceCount.ToString()"
-                       Detail="@($"{_deviceStates.Count} discovered devices")" Mark="●" AccentClass="accent-amber" />
+                       Detail="@($"{_deviceStates.Count} discovered devices")" Icon="online" AccentClass="accent-amber" />
     </section>
 
     <div class="dashboard-grid">
@@ -108,13 +109,14 @@ else if (_summary is not null)
         {
             <div class="table-scroll">
                 <table>
-                    <thead><tr><th>Device</th><th>Download</th><th>Upload</th><th>Total</th><th>Share</th></tr></thead>
+                    <thead><tr><th>Device</th><th>MAC address</th><th>Download</th><th>Upload</th><th>Total</th><th>Share</th></tr></thead>
                     <tbody>
                         @foreach (var device in _deviceUsage)
                         {
                             var total = device.Totals.DownloadBytes + device.Totals.UploadBytes;
                             <tr>
                                 <td><a href="@($"devices/{device.DeviceId}")">@device.DisplayName</a></td>
+                                <td class="mac-address">@(device.MacAddress ?? "—")</td>
                                 <td class="download-value">@UsageFormatting.Bytes(device.Totals.DownloadBytes)</td>
                                 <td class="upload-value">@UsageFormatting.Bytes(device.Totals.UploadBytes)</td>
                                 <td>@UsageFormatting.Bytes(total)</td>
@@ -137,6 +139,10 @@ else if (_summary is not null)
     private string? _error;
     private bool _loading = true;
     private bool _periodLoading;
+    private readonly PeriodicTimer _refreshTimer = new(TimeSpan.FromSeconds(2));
+    private readonly CancellationTokenSource _refreshCancellation = new();
+    private readonly SemaphoreSlim _loadLock = new(1, 1);
+    private Task? _refreshTask;
 
     private UsagePeriodResponse SelectedPeriod => _selectedPeriod switch
     {
@@ -159,11 +165,32 @@ else if (_summary is not null)
     private int OnlineDeviceCount => _deviceStates.Count(device => device.IsOnline);
     private long PeriodTotal => SelectedPeriod.Totals.DownloadBytes + SelectedPeriod.Totals.UploadBytes;
 
-    protected override async Task OnInitializedAsync() => await LoadAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+        _refreshTask = RefreshLoopAsync();
+    }
 
     private async Task LoadAsync()
     {
-        _loading = true;
+        await _loadLock.WaitAsync();
+        try
+        {
+            await LoadDashboardAsync(showLoading: true);
+        }
+        finally
+        {
+            _loadLock.Release();
+        }
+    }
+
+    private async Task LoadDashboardAsync(bool showLoading)
+    {
+        if (showLoading)
+        {
+            _loading = true;
+        }
+
         _error = null;
         try
         {
@@ -178,7 +205,7 @@ else if (_summary is not null)
                 return;
             }
 
-            await LoadPeriodAsync();
+            await LoadPeriodAsync(showLoading);
         }
         catch (HttpRequestException)
         {
@@ -186,7 +213,10 @@ else if (_summary is not null)
         }
         finally
         {
-            _loading = false;
+            if (showLoading)
+            {
+                _loading = false;
+            }
         }
     }
 
@@ -197,17 +227,29 @@ else if (_summary is not null)
             return;
         }
 
-        _selectedPeriod = period;
-        await LoadPeriodAsync();
+        await _loadLock.WaitAsync();
+        try
+        {
+            _selectedPeriod = period;
+            await LoadPeriodAsync(showLoading: true);
+        }
+        finally
+        {
+            _loadLock.Release();
+        }
     }
 
     private Task SelectTodayAsync() => SelectPeriodAsync("today");
     private Task SelectWeekAsync() => SelectPeriodAsync("week");
     private Task SelectMonthAsync() => SelectPeriodAsync("month");
 
-    private async Task LoadPeriodAsync()
+    private async Task LoadPeriodAsync(bool showLoading)
     {
-        _periodLoading = true;
+        if (showLoading)
+        {
+            _periodLoading = true;
+        }
+
         try
         {
             var range = SelectedPeriod;
@@ -228,8 +270,56 @@ else if (_summary is not null)
         }
         finally
         {
-            _periodLoading = false;
+            if (showLoading)
+            {
+                _periodLoading = false;
+            }
         }
+    }
+
+    private async Task RefreshLoopAsync()
+    {
+        try
+        {
+            while (await _refreshTimer.WaitForNextTickAsync(_refreshCancellation.Token))
+            {
+                await InvokeAsync(RefreshAsync);
+            }
+        }
+        catch (OperationCanceledException) when (_refreshCancellation.IsCancellationRequested)
+        {
+        }
+    }
+
+    private async Task RefreshAsync()
+    {
+        if (!await _loadLock.WaitAsync(0))
+        {
+            return;
+        }
+
+        try
+        {
+            await LoadDashboardAsync(showLoading: false);
+        }
+        finally
+        {
+            _loadLock.Release();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _refreshCancellation.CancelAsync();
+        _refreshTimer.Dispose();
+
+        if (_refreshTask is not null)
+        {
+            await _refreshTask;
+        }
+
+        _refreshCancellation.Dispose();
+        _loadLock.Dispose();
     }
 
     private string PeriodClass(string period) => _selectedPeriod == period ? "active" : string.Empty;
