@@ -39,5 +39,5 @@
     private double Height(long value) => value == 0 ? 0 : Math.Max(3, value * 100d / Maximum);
 
     private static string Title(UsageHistoryPointResponse point) =>
-        $"{point.Label}: {UsageFormatting.Bytes(point.Totals.DownloadBytes)} downloaded, {UsageFormatting.Bytes(point.Totals.UploadBytes)} uploaded";
+        $"{point.Label}: {Helpers.Bytes(point.Totals.DownloadBytes)} downloaded, {Helpers.Bytes(point.Totals.UploadBytes)} uploaded";
 }

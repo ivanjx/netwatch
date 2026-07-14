@@ -45,9 +45,9 @@ else if (_summary is not null)
 
     <section class="stat-grid" aria-label="Network totals">
         <UsageStatCard Label="Total download" PrimaryBytes="@SelectedPeriod.Totals.DownloadBytes"
-                       Detail="@($"{UsageFormatting.Number(SelectedPeriod.Totals.DownloadPackets)} packets")" Icon="download" />
+                       Detail="@($"{Helpers.Number(SelectedPeriod.Totals.DownloadPackets)} packets")" Icon="download" />
         <UsageStatCard Label="Total upload" PrimaryBytes="@SelectedPeriod.Totals.UploadBytes"
-                       Detail="@($"{UsageFormatting.Number(SelectedPeriod.Totals.UploadPackets)} packets")" Icon="upload" AccentClass="accent-violet" />
+                       Detail="@($"{Helpers.Number(SelectedPeriod.Totals.UploadPackets)} packets")" Icon="upload" AccentClass="accent-violet" />
         <UsageStatCard Label="Total traffic" PrimaryBytes="@(SelectedPeriod.Totals.DownloadBytes + SelectedPeriod.Totals.UploadBytes)"
                        Detail="@PeriodLabel" Icon="activity" AccentClass="accent-green" />
         <UsageStatCard Label="Online devices" Value="@OnlineDeviceCount.ToString()"
@@ -88,7 +88,7 @@ else if (_summary is not null)
                         <li>
                             <span class="rank">@(Array.IndexOf(_deviceUsage.ToArray(), device) + 1)</span>
                             <div><a href="@($"devices/{device.DeviceId}")">@device.DisplayName</a><span>@Share(total)</span></div>
-                            <strong>@UsageFormatting.Bytes(total)</strong>
+                            <strong>@Helpers.Bytes(total)</strong>
                         </li>
                     }
                 </ol>
@@ -117,9 +117,9 @@ else if (_summary is not null)
                             <tr>
                                 <td><a href="@($"devices/{device.DeviceId}")">@device.DisplayName</a></td>
                                 <td class="mac-address">@(device.MacAddress ?? "—")</td>
-                                <td class="download-value">@UsageFormatting.Bytes(device.Totals.DownloadBytes)</td>
-                                <td class="upload-value">@UsageFormatting.Bytes(device.Totals.UploadBytes)</td>
-                                <td>@UsageFormatting.Bytes(total)</td>
+                                <td class="download-value">@Helpers.Bytes(device.Totals.DownloadBytes)</td>
+                                <td class="upload-value">@Helpers.Bytes(device.Totals.UploadBytes)</td>
+                                <td>@Helpers.Bytes(total)</td>
                                 <td>@Share(total)</td>
                             </tr>
                         }

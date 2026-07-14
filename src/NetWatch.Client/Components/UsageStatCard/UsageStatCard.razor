@@ -5,7 +5,7 @@
         <span>@Label</span>
         <span class="stat-card__mark" aria-hidden="true"><AppIcon Name="@Icon" /></span>
     </div>
-    <strong>@(Value ?? UsageFormatting.Bytes(PrimaryBytes))</strong>
+    <strong>@(Value ?? Helpers.Bytes(PrimaryBytes))</strong>
     <span class="stat-card__detail">@Detail</span>
 </article>
 

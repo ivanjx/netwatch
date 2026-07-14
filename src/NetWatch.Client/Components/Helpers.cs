@@ -2,7 +2,7 @@ using NetWatch.Core.Usage;
 
 namespace NetWatch.Client.Components;
 
-public static class UsageFormatting
+public static class Helpers
 {
     private static readonly string[] _units = ["B", "KB", "MB", "GB", "TB", "PB"];
 
