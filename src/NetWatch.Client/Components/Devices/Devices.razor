@@ -65,7 +65,7 @@ else
                         <h2><a href="@($"devices/{device.Id}")">@device.DisplayName</a></h2>
                         <button class="link-button" @onclick="() => BeginRename(device)">Rename</button>
                     }
-                    <p>@(device.CurrentIpAddress ?? "No current IP") · @(device.MacAddress ?? "No MAC") · @device.Type</p>
+                    <p class="selectable-text">@(device.CurrentIpAddress ?? "No current IP") · @(device.MacAddress ?? "No MAC") · @device.Type</p>
                 </div>
                 <div class="device-state">
                     <span class="@DeviceStatusClass(device)">@DeviceStatusLabel(device)</span>

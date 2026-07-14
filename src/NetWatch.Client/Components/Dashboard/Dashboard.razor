@@ -112,7 +112,7 @@ else if (_summary is not null)
                             var total = device.Totals.DownloadBytes + device.Totals.UploadBytes;
                             <tr>
                                 <td><a href="@($"devices/{device.DeviceId}")">@device.DisplayName</a></td>
-                                <td class="mac-address">@(device.MacAddress ?? "—")</td>
+                                <td class="mac-address selectable-text">@(device.MacAddress ?? "—")</td>
                                 <td class="download-value">@Helpers.Bytes(device.Totals.DownloadBytes)</td>
                                 <td class="upload-value">@Helpers.Bytes(device.Totals.UploadBytes)</td>
                                 <td>@Helpers.Bytes(total)</td>

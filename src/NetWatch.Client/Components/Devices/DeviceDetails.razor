@@ -79,15 +79,15 @@ else if (_device is not null)
         <aside class="panel identity-panel">
             <div class="panel-heading"><div><p class="eyebrow">Identity</p><h2>Device information</h2></div></div>
             <dl>
-                <div><dt>Current IP</dt><dd>@(_device.CurrentIpAddress ?? "Not assigned")</dd></div>
-                <div><dt>MAC address</dt><dd>@(_device.MacAddress ?? "Not recorded")</dd></div>
+                <div><dt>Current IP</dt><dd class="selectable-text">@(_device.CurrentIpAddress ?? "Not assigned")</dd></div>
+                <div><dt>MAC address</dt><dd class="selectable-text">@(_device.MacAddress ?? "Not recorded")</dd></div>
                 <div><dt>Type</dt><dd>@_device.Type</dd></div>
                 <div><dt>Source</dt><dd>@(_device.IsManual ? "Manual" : "DHCP")</dd></div>
                 <div><dt>Last seen</dt><dd>@(_device.LastSeen ?? "Not reported")</dd></div>
             </dl>
             @if (!string.IsNullOrWhiteSpace(_device.Notes))
             {
-                <div class="notes"><span>Notes</span><p>@_device.Notes</p></div>
+                <div class="notes"><span>Notes</span><p class="selectable-text">@_device.Notes</p></div>
             }
         </aside>
     </div>
@@ -107,7 +107,7 @@ else if (_device is not null)
                         @foreach (var assignment in _device.IpAssignments)
                         {
                             <tr>
-                                <td><code>@assignment.IpAddress</code></td>
+                                <td class="selectable-text"><code>@assignment.IpAddress</code></td>
                                 <td>@assignment.Source</td>
                                 <td>@assignment.ValidFromDisplay</td>
                                 <td>@(assignment.ValidToDisplay ?? "Current")</td>
