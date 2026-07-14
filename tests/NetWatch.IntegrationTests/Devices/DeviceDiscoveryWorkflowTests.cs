@@ -79,7 +79,9 @@ public sealed class DeviceDiscoveryWorkflowTests
             Assert.Equal("Family tablet", details.FriendlyName);
             Assert.Equal(2, details.IpAssignments.Count);
             Assert.Null(details.IpAssignments[0].ValidToUtc);
+            Assert.NotNull(details.IpAssignments[0].ValidFromDisplay);
             Assert.NotNull(details.IpAssignments[1].ValidToUtc);
+            Assert.NotNull(details.IpAssignments[1].ValidToDisplay);
 
             var manualResult = await DeviceHandlers.CreateManualAsync(
                 new CreateManualDeviceRequest(

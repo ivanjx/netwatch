@@ -1,6 +1,7 @@
 @page "/devices/{Id}"
 @inject HttpClient _http
 @inject Microsoft.JSInterop.IJSRuntime _js
+@using NetWatch.Core.Diagnostics
 @using NetWatch.Core.Devices
 @using NetWatch.Core.Usage
 
@@ -108,8 +109,8 @@ else if (_device is not null)
                             <tr>
                                 <td><code>@assignment.IpAddress</code></td>
                                 <td>@assignment.Source</td>
-                                <td>@assignment.ValidFromUtc.ToLocalTime().ToString("g")</td>
-                                <td>@(assignment.ValidToUtc?.ToLocalTime().ToString("g") ?? "Current")</td>
+                                <td>@assignment.ValidFromDisplay</td>
+                                <td>@(assignment.ValidToDisplay ?? "Current")</td>
                             </tr>
                         }
                     </tbody>
@@ -123,6 +124,7 @@ else if (_device is not null)
     [Parameter] public string Id { get; set; } = string.Empty;
 
     private DeviceDetailsResponse? _device;
+    private SystemStatusResponse? _status;
     private UsageSummaryResponse? _summary;
     private UsageTotalsResponse _today = EmptyTotals;
     private UsageTotalsResponse _week = EmptyTotals;
@@ -162,18 +164,20 @@ else if (_device is not null)
         {
             var deviceTask = _http.GetFromJsonAsync<DeviceDetailsResponse>($"api/devices/{Uri.EscapeDataString(Id)}");
             var summaryTask = _http.GetFromJsonAsync<UsageSummaryResponse>("api/usage/summary");
-            await Task.WhenAll(deviceTask, summaryTask);
+            var statusTask = _http.GetFromJsonAsync<SystemStatusResponse>("api/status");
+            await Task.WhenAll(deviceTask, summaryTask, statusTask);
             _device = await deviceTask;
             _summary = await summaryTask;
-            if (_device is null || _summary is null)
+            _status = await statusTask;
+            if (_device is null || _summary is null || _status is null)
             {
                 _error = "NetWatch returned an incomplete device record.";
                 return;
             }
 
-            var localToday = DateTime.Today;
-            _fromDate = new DateTime(localToday.Year, localToday.Month, 1);
-            _toDate = localToday;
+            var reportingToday = _status.CurrentTime.Date;
+            _fromDate = new DateTime(reportingToday.Year, reportingToday.Month, 1);
+            _toDate = reportingToday;
             var todayTask = LoadDeviceTotalsAsync(_summary.Today);
             var weekTask = LoadDeviceTotalsAsync(_summary.Week);
             var monthTask = LoadDeviceTotalsAsync(_summary.Month);

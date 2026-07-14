@@ -9,7 +9,8 @@ namespace NetWatch.Server.Health;
 internal sealed class SystemStatusService(
     SystemStatusRepository _repository,
     NetWatchOptions _options,
-    ApplicationState _applicationState)
+    ApplicationState _applicationState,
+    TimeProvider _timeProvider)
 {
     public async Task<ServiceResult> GetAsync(CancellationToken cancellationToken)
     {
@@ -25,6 +26,7 @@ internal sealed class SystemStatusService(
                     $"{IPAddress.Any}:{_options.NetFlowListenPort}",
                     _options.MikroTikBaseUrl is not null,
                     _options.ReportingTimeZone.Id,
+                    TimeZoneInfo.ConvertTime(_timeProvider.GetUtcNow(), _options.ReportingTimeZone),
                     _applicationState.StartedAtUtc)),
             DatabaseUnavailableRepositoryErrorResult => new SystemStatusUnavailableServiceErrorResult(),
             _ => new SystemStatusUnavailableServiceErrorResult()

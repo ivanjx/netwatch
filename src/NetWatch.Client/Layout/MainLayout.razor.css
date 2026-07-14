@@ -144,6 +144,27 @@ nav ::deep a.active .nav-symbol {
     font-size: 0.74rem;
 }
 
+.topbar-meta {
+    align-items: center;
+    display: flex;
+    gap: 0.7rem;
+}
+
+.server-clock {
+    align-items: center;
+    color: var(--text-muted);
+    display: flex;
+    font-size: 0.72rem;
+    gap: 0.4rem;
+    white-space: nowrap;
+}
+
+.server-clock ::deep .app-icon {
+    color: var(--blue-light);
+    height: 0.9rem;
+    width: 0.9rem;
+}
+
 .phase-badge {
     align-items: center;
     background: rgb(54 211 124 / 8%);
@@ -204,5 +225,16 @@ nav ::deep a.active .nav-symbol {
 
     .content {
         padding: 1rem;
+    }
+}
+
+@media (max-width: 980px) {
+    .topbar-context,
+    .phase-badge {
+        display: none;
+    }
+
+    .topbar {
+        justify-content: flex-end;
     }
 }

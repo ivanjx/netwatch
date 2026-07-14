@@ -1,9 +1,12 @@
+using System.Globalization;
+
 using NetWatch.Core.Devices;
 using NetWatch.Server.Common;
+using NetWatch.Server.Configuration;
 
 namespace NetWatch.Server.Devices;
 
-internal sealed class DeviceService(DeviceRepository _repository)
+internal sealed class DeviceService(DeviceRepository _repository, NetWatchOptions? _options = null)
 {
     public async Task<ServiceResult> ListAsync(CancellationToken cancellationToken) =>
         await _repository.ListAsync(cancellationToken) switch
@@ -16,7 +19,7 @@ internal sealed class DeviceService(DeviceRepository _repository)
     public async Task<ServiceResult> GetAsync(string id, CancellationToken cancellationToken) =>
         await _repository.GetAsync(id, cancellationToken) switch
         {
-            RepositoryResult<DeviceDetailsResponse> success => new DeviceDetailsResult(success.Value),
+            RepositoryResult<DeviceDetailsResponse> success => new DeviceDetailsResult(AddReportingTimes(success.Value)),
             DeviceNotFoundRepositoryErrorResult => new DeviceNotFoundServiceErrorResult(),
             DeviceRepositoryErrorResult => new DeviceUnavailableServiceErrorResult(),
             _ => new DeviceUnavailableServiceErrorResult()
@@ -90,4 +93,21 @@ internal sealed class DeviceService(DeviceRepository _repository)
 
     private static string? NullIfWhiteSpace(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private DeviceDetailsResponse AddReportingTimes(DeviceDetailsResponse device) => device with
+    {
+        IpAssignments = device.IpAssignments
+            .Select(assignment => assignment with
+            {
+                ValidFromDisplay = FormatReportingTime(assignment.ValidFromUtc),
+                ValidToDisplay = assignment.ValidToUtc is { } validToUtc ?
+                    FormatReportingTime(validToUtc) :
+                    null
+            })
+            .ToArray()
+    };
+
+    private string FormatReportingTime(DateTimeOffset value) =>
+        TimeZoneInfo.ConvertTime(value, _options?.ReportingTimeZone ?? TimeZoneInfo.Utc)
+            .ToString("d MMM yyyy HH:mm", CultureInfo.InvariantCulture);
 }

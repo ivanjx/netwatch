@@ -46,7 +46,8 @@ public sealed class SystemStatusWorkflowTests
             var service = new SystemStatusService(
                 repository,
                 options,
-                new ApplicationState(DateTimeOffset.UnixEpoch));
+                new ApplicationState(DateTimeOffset.UnixEpoch),
+                TimeProvider.System);
 
             var result = await SystemStatusHandler.GetAsync(service, CancellationToken.None);
 
@@ -54,6 +55,10 @@ public sealed class SystemStatusWorkflowTests
             var response = Assert.IsType<SystemStatusResponse>(httpResult.Value);
             Assert.Equal("Healthy", response.State);
             Assert.Equal(2, response.SchemaVersion);
+            Assert.Equal(options.ReportingTimeZone.Id, response.ReportingTimezone);
+            Assert.Equal(
+                options.ReportingTimeZone.GetUtcOffset(response.CurrentTime.UtcDateTime),
+                response.CurrentTime.Offset);
             Assert.Equal(DateTimeOffset.UnixEpoch, response.StartedAtUtc);
         }
         finally

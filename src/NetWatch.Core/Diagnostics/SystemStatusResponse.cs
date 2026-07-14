@@ -8,4 +8,5 @@ public sealed record SystemStatusResponse(
     string NetFlowEndpoint,
     bool MikroTikConfigured,
     string ReportingTimezone,
+    DateTimeOffset CurrentTime,
     DateTimeOffset StartedAtUtc);

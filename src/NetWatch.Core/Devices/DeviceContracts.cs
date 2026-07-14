@@ -36,7 +36,9 @@ public sealed record IpAssignmentResponse(
     string IpAddress,
     string Source,
     DateTimeOffset ValidFromUtc,
-    DateTimeOffset? ValidToUtc);
+    DateTimeOffset? ValidToUtc,
+    string? ValidFromDisplay = null,
+    string? ValidToDisplay = null);
 
 public sealed record RenameDeviceRequest(string? FriendlyName);
 

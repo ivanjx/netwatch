@@ -105,6 +105,10 @@
     margin-bottom: 1rem;
 }
 
+.history-heading {
+    gap: 1rem;
+}
+
 .panel-heading h2 {
     font-size: 1.05rem;
     margin: 0;
@@ -122,7 +126,9 @@
 .date-range {
     align-items: end;
     display: flex;
+    flex-wrap: wrap;
     gap: 0.5rem;
+    justify-content: flex-end;
 }
 
 .date-range label {
