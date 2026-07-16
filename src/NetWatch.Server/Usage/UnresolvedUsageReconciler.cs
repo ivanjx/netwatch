@@ -11,6 +11,11 @@ internal sealed class UnresolvedUsageReconciler(
     {
         _attributionService.Invalidate();
         var readResult = await _repository.ReadUnresolvedAsync(1_000, cancellationToken);
+        if (readResult is CanceledRepositoryErrorResult)
+        {
+            return;
+        }
+
         if (readResult is not RepositoryResult<IReadOnlyList<UnresolvedUsageRecord>> success)
         {
             _logger.LogWarning("Unresolved usage reconciliation could not read pending records");
@@ -46,7 +51,7 @@ internal sealed class UnresolvedUsageReconciler(
             reconciled,
             DateTimeOffset.UtcNow,
             cancellationToken);
-        if (storeResult is ErrorRepositoryResult)
+        if (storeResult is ErrorRepositoryResult and not CanceledRepositoryErrorResult)
         {
             _logger.LogWarning("Unresolved usage reconciliation could not persist resolved records");
         }

@@ -26,6 +26,8 @@ internal sealed class DhcpSynchronizationWorker(
                 case DeviceSynchronizationResult success:
                     _logger.LogInformation("Synchronized {ActiveLeaseCount} active DHCP leases", success.ActiveLeaseCount);
                     break;
+                case CanceledServiceErrorResult:
+                    return;
                 case ErrorServiceResult error:
                     _logger.LogWarning("DHCP synchronization failed: {Error}", error);
                     break;

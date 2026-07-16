@@ -82,6 +82,10 @@ internal sealed class NetFlowProcessingWorker(
             {
                 _accumulator.Clear();
             }
+            else if (result is CanceledRepositoryErrorResult)
+            {
+                return;
+            }
             else if (result is ErrorRepositoryResult)
             {
                 _logger.LogWarning("Usage aggregates remain queued after a failed flush");

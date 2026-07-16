@@ -22,6 +22,11 @@ internal sealed class DeviceSynchronizationService(
             version.IsSupported,
             detectedAtUtc,
             cancellationToken);
+        if (storedVersion is CanceledRepositoryErrorResult)
+        {
+            return new CanceledServiceErrorResult();
+        }
+
         if (storedVersion is DeviceRepositoryErrorResult)
         {
             return new DeviceUnavailableServiceErrorResult();
@@ -70,6 +75,7 @@ internal sealed class DeviceSynchronizationService(
         return repositoryResult switch
         {
             DeviceWriteRepositoryResult => new DeviceSynchronizationResult(normalized.Count(item => item.IsActive)),
+            CanceledRepositoryErrorResult => new CanceledServiceErrorResult(),
             DeviceRepositoryErrorResult => new DeviceUnavailableServiceErrorResult(),
             _ => new DeviceUnavailableServiceErrorResult()
         };

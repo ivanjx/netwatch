@@ -18,9 +18,9 @@ internal sealed class SqliteHealthCheck(SqliteConnectionFactory _connectionFacto
             await command.ExecuteScalarAsync(cancellationToken);
             return HealthCheckResult.Healthy("SQLite is available.");
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
         {
-            throw;
+            return HealthCheckResult.Unhealthy("SQLite health check was canceled.", exception);
         }
         catch (Exception exception)
         {

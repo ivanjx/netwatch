@@ -28,6 +28,7 @@ internal sealed class SystemStatusService(
                     _options.ReportingTimeZone.Id,
                     TimeZoneInfo.ConvertTime(_timeProvider.GetUtcNow(), _options.ReportingTimeZone),
                     _applicationState.StartedAtUtc)),
+            CanceledRepositoryErrorResult => new CanceledServiceErrorResult(),
             DatabaseUnavailableRepositoryErrorResult => new SystemStatusUnavailableServiceErrorResult(),
             _ => new SystemStatusUnavailableServiceErrorResult()
         };

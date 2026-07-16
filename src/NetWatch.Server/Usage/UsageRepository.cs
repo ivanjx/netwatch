@@ -58,7 +58,7 @@ internal sealed class UsageRepository(
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            throw;
+            return new CanceledRepositoryErrorResult();
         }
         catch (Exception exception)
         {
@@ -111,7 +111,7 @@ internal sealed class UsageRepository(
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            throw;
+            return new CanceledRepositoryErrorResult();
         }
         catch (Exception exception)
         {
@@ -159,7 +159,7 @@ internal sealed class UsageRepository(
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            throw;
+            return new CanceledRepositoryErrorResult();
         }
         catch (Exception exception)
         {
@@ -198,7 +198,7 @@ internal sealed class UsageRepository(
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            throw;
+            return new CanceledRepositoryErrorResult();
         }
         catch (Exception exception)
         {
@@ -230,7 +230,7 @@ internal sealed class UsageRepository(
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            throw;
+            return new CanceledRepositoryErrorResult();
         }
         catch (Exception exception)
         {
@@ -279,7 +279,7 @@ internal sealed class UsageRepository(
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            throw;
+            return new CanceledRepositoryErrorResult();
         }
         catch (Exception exception)
         {
@@ -328,7 +328,7 @@ internal sealed class UsageRepository(
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            throw;
+            return new CanceledRepositoryErrorResult();
         }
         catch (Exception exception)
         {
@@ -360,7 +360,7 @@ internal sealed class UsageRepository(
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            throw;
+            return new CanceledRepositoryErrorResult();
         }
         catch (Exception exception)
         {
@@ -383,7 +383,7 @@ internal sealed class UsageRepository(
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            throw;
+            return new CanceledRepositoryErrorResult();
         }
         catch (Exception exception)
         {
@@ -414,7 +414,7 @@ internal sealed class UsageRepository(
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            throw;
+            return new CanceledRepositoryErrorResult();
         }
         catch (Exception exception)
         {

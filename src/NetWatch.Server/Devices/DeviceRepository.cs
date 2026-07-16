@@ -37,7 +37,7 @@ internal sealed class DeviceRepository(
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            throw;
+            return new CanceledRepositoryErrorResult();
         }
         catch (Exception exception)
         {
@@ -154,7 +154,7 @@ internal sealed class DeviceRepository(
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            throw;
+            return new CanceledRepositoryErrorResult();
         }
         catch (Exception exception)
         {
@@ -201,7 +201,7 @@ internal sealed class DeviceRepository(
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            throw;
+            return new CanceledRepositoryErrorResult();
         }
         catch (Exception exception)
         {
@@ -263,7 +263,7 @@ internal sealed class DeviceRepository(
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            throw;
+            return new CanceledRepositoryErrorResult();
         }
         catch (Exception exception)
         {
@@ -295,7 +295,7 @@ internal sealed class DeviceRepository(
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            throw;
+            return new CanceledRepositoryErrorResult();
         }
         catch (Exception exception)
         {
@@ -349,7 +349,7 @@ internal sealed class DeviceRepository(
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            throw;
+            return new CanceledRepositoryErrorResult();
         }
         catch (SqliteException exception) when (exception.SqliteErrorCode == 19)
         {

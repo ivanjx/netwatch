@@ -11,6 +11,11 @@ internal sealed class CollectorDiagnosticsService(
     public async Task<ServiceResult> GetAsync(CancellationToken cancellationToken)
     {
         var result = await _usageRepository.GetDiagnosticStateAsync(cancellationToken);
+        if (result is CanceledRepositoryErrorResult)
+        {
+            return new CanceledServiceErrorResult();
+        }
+
         if (result is not RepositoryResult<UsageDiagnosticState> usage)
         {
             return new CollectorDiagnosticsUnavailableServiceErrorResult();

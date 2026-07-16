@@ -11,7 +11,15 @@ internal sealed class UsageClearService(
         string deviceId,
         CancellationToken cancellationToken)
     {
-        await _mutationLock.WaitAsync(cancellationToken);
+        try
+        {
+            await _mutationLock.WaitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return new CanceledServiceErrorResult();
+        }
+
         try
         {
             var result = await _repository.ClearDeviceAsync(deviceId, cancellationToken);
@@ -30,7 +38,15 @@ internal sealed class UsageClearService(
 
     public async Task<ServiceResult> ClearAllAsync(CancellationToken cancellationToken)
     {
-        await _mutationLock.WaitAsync(cancellationToken);
+        try
+        {
+            await _mutationLock.WaitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return new CanceledServiceErrorResult();
+        }
+
         try
         {
             var result = await _repository.ClearAllAsync(cancellationToken);
@@ -50,6 +66,7 @@ internal sealed class UsageClearService(
     private static ServiceResult Map(RepositoryResult result) => result switch
     {
         UsageWriteRepositoryResult => new UsageClearedResult(),
+        CanceledRepositoryErrorResult => new CanceledServiceErrorResult(),
         ErrorRepositoryResult => new UsageUnavailableServiceErrorResult(),
         _ => new UsageUnavailableServiceErrorResult()
     };

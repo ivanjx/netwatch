@@ -19,7 +19,7 @@ internal sealed class SystemStatusRepository(
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            throw;
+            return new CanceledRepositoryErrorResult();
         }
         catch (Exception exception)
         {

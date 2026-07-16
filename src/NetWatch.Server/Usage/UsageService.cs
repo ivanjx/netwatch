@@ -41,12 +41,22 @@ internal sealed class UsageService(
         var weekFromUtc = ToUtc(weekLocal, context.TimeZone);
         var monthFromUtc = ToUtc(monthLocal, context.TimeZone);
 
-        var today = await ReadTotalsAsync(todayFromUtc, nowUtc, context, cancellationToken);
-        var week = await ReadTotalsAsync(weekFromUtc, nowUtc, context, cancellationToken);
-        var month = await ReadTotalsAsync(monthFromUtc, nowUtc, context, cancellationToken);
-        if (today is null || week is null || month is null)
+        var todayResult = await ReadTotalsAsync(todayFromUtc, nowUtc, context, cancellationToken);
+        if (todayResult is not UsageTotalsResult today)
         {
-            return new UsageUnavailableServiceErrorResult();
+            return todayResult;
+        }
+
+        var weekResult = await ReadTotalsAsync(weekFromUtc, nowUtc, context, cancellationToken);
+        if (weekResult is not UsageTotalsResult week)
+        {
+            return weekResult;
+        }
+
+        var monthResult = await ReadTotalsAsync(monthFromUtc, nowUtc, context, cancellationToken);
+        if (monthResult is not UsageTotalsResult month)
+        {
+            return monthResult;
         }
 
         return new UsageSummaryResult(new UsageSummaryResponse(
@@ -54,9 +64,9 @@ internal sealed class UsageService(
             context.TimeZone.Id,
             context.Category,
             context.WanInterface,
-            new UsagePeriodResponse(todayFromUtc, nowUtc, today),
-            new UsagePeriodResponse(weekFromUtc, nowUtc, week),
-            new UsagePeriodResponse(monthFromUtc, nowUtc, month)));
+            new UsagePeriodResponse(todayFromUtc, nowUtc, today.Value),
+            new UsagePeriodResponse(weekFromUtc, nowUtc, week.Value),
+            new UsagePeriodResponse(monthFromUtc, nowUtc, month.Value)));
     }
 
     public async Task<ServiceResult> GetDevicesAsync(
@@ -88,6 +98,7 @@ internal sealed class UsageService(
         return result switch
         {
             RepositoryResult<IReadOnlyList<DeviceUsageResponse>> success => new DeviceUsageListResult(success.Value),
+            CanceledRepositoryErrorResult => new CanceledServiceErrorResult(),
             ErrorRepositoryResult => new UsageUnavailableServiceErrorResult(),
             _ => new UsageUnavailableServiceErrorResult()
         };
@@ -125,6 +136,11 @@ internal sealed class UsageService(
             new UsageQuery(fromUtc, toUtc, context.Category, context.WanInterface),
             normalizedDeviceId,
             cancellationToken);
+        if (result is CanceledRepositoryErrorResult)
+        {
+            return new CanceledServiceErrorResult();
+        }
+
         if (result is not RepositoryResult<IReadOnlyList<UsageHourlySample>> success)
         {
             return new UsageUnavailableServiceErrorResult();
@@ -139,7 +155,7 @@ internal sealed class UsageService(
             GroupSamples(success.Value, selectedGrouping, context.TimeZone, fromUtc, toUtc)));
     }
 
-    private async Task<UsageTotalsResponse?> ReadTotalsAsync(
+    private async Task<ServiceResult> ReadTotalsAsync(
         DateTimeOffset fromUtc,
         DateTimeOffset toUtc,
         QueryContext context,
@@ -148,7 +164,12 @@ internal sealed class UsageService(
         var result = await _repository.GetTotalsAsync(
             new UsageQuery(fromUtc, toUtc, context.Category, context.WanInterface),
             cancellationToken);
-        return result is RepositoryResult<UsageTotalsResponse> success ? success.Value : null;
+        return result switch
+        {
+            RepositoryResult<UsageTotalsResponse> success => new UsageTotalsResult(success.Value),
+            CanceledRepositoryErrorResult => new CanceledServiceErrorResult(),
+            _ => new UsageUnavailableServiceErrorResult()
+        };
     }
 
     private bool TryCreateContext(
@@ -286,4 +307,6 @@ internal sealed class UsageService(
         new(TimeZoneInfo.ConvertTimeToUtc(localDateTime, timeZone), TimeSpan.Zero);
 
     private sealed record QueryContext(TimeZoneInfo TimeZone, string Category, string? WanInterface);
+
+    private sealed record UsageTotalsResult(UsageTotalsResponse Value) : SuccessServiceResult;
 }

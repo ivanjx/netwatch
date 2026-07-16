@@ -12,6 +12,7 @@ internal sealed class DeviceService(DeviceRepository _repository, NetWatchOption
         await _repository.ListAsync(cancellationToken) switch
         {
             RepositoryResult<IReadOnlyList<DeviceSummaryResponse>> success => new DeviceListResult(success.Value),
+            CanceledRepositoryErrorResult => new CanceledServiceErrorResult(),
             DeviceRepositoryErrorResult => new DeviceUnavailableServiceErrorResult(),
             _ => new DeviceUnavailableServiceErrorResult()
         };
@@ -20,6 +21,7 @@ internal sealed class DeviceService(DeviceRepository _repository, NetWatchOption
         await _repository.GetAsync(id, cancellationToken) switch
         {
             RepositoryResult<DeviceDetailsResponse> success => new DeviceDetailsResult(AddReportingTimes(success.Value)),
+            CanceledRepositoryErrorResult => new CanceledServiceErrorResult(),
             DeviceNotFoundRepositoryErrorResult => new DeviceNotFoundServiceErrorResult(),
             DeviceRepositoryErrorResult => new DeviceUnavailableServiceErrorResult(),
             _ => new DeviceUnavailableServiceErrorResult()
@@ -40,6 +42,7 @@ internal sealed class DeviceService(DeviceRepository _repository, NetWatchOption
         return result switch
         {
             DeviceWriteRepositoryResult => await GetAsync(id, cancellationToken),
+            CanceledRepositoryErrorResult => new CanceledServiceErrorResult(),
             DeviceNotFoundRepositoryErrorResult => new DeviceNotFoundServiceErrorResult(),
             DeviceRepositoryErrorResult => new DeviceUnavailableServiceErrorResult(),
             _ => new DeviceUnavailableServiceErrorResult()
@@ -85,6 +88,7 @@ internal sealed class DeviceService(DeviceRepository _repository, NetWatchOption
         return result switch
         {
             RepositoryResult<string> success => await GetAsync(success.Value, cancellationToken),
+            CanceledRepositoryErrorResult => new CanceledServiceErrorResult(),
             DeviceConflictRepositoryErrorResult => new DeviceConflictServiceErrorResult(),
             DeviceRepositoryErrorResult => new DeviceUnavailableServiceErrorResult(),
             _ => new DeviceUnavailableServiceErrorResult()

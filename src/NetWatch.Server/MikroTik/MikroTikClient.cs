@@ -161,7 +161,7 @@ internal sealed class MikroTikClient : IMikroTikClient, IDisposable
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            throw;
+            return new CanceledServiceErrorResult();
         }
         catch (JsonException exception)
         {
