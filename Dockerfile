@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0-noble AS build
+FROM mcr.microsoft.com/dotnet/sdk:11.0-noble AS build
 
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends clang zlib1g-dev \
@@ -15,7 +15,7 @@ RUN dotnet publish src/NetWatch.Server/NetWatch.Server.csproj \
     --output /app/publish
 
 
-FROM mcr.microsoft.com/dotnet/runtime-deps:10.0-noble-chiseled-extra AS final
+FROM mcr.microsoft.com/dotnet/runtime-deps:11.0-noble-chiseled-extra AS final
 
 WORKDIR /app
 COPY --from=build --chown=$APP_UID:$APP_UID /app/publish/ ./
