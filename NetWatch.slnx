@@ -12,4 +12,10 @@
   <Folder Name="/tests/">
     <Project Path="tests/NetWatch.IntegrationTests/NetWatch.IntegrationTests.csproj" />
   </Folder>
+  <Folder Name="/third_party/">
+    <Project Path="third_party/wick/src/Wick.Blazor/Wick.Blazor.csproj" />
+    <Project Path="third_party/wick/src/Wick.CodeFixes/Wick.CodeFixes.csproj" />
+    <Project Path="third_party/wick/src/Wick.Core/Wick.Core.csproj" />
+    <Project Path="third_party/wick/src/Wick.Generators/Wick.Generators.csproj" />
+  </Folder>
 </Solution>

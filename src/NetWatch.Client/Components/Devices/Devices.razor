@@ -1,6 +1,7 @@
 @page "/devices"
 @inject HttpClient _http
 @inject Microsoft.JSInterop.IJSRuntime _js
+@inject DevicesState State
 @using System.Net
 @using System.Net.Http.Json
 @using NetWatch.Core.Devices
@@ -11,54 +12,54 @@
     <div><p class="eyebrow">Inventory</p><h1>Devices</h1></div>
     <div class="page-actions">
         <p>DHCP clients discovered from RouterOS and devices you add manually.</p>
-        <button class="danger-button" disabled="@_clearingUsage" @onclick="ClearAllUsageAsync">
-            @(_clearingUsage ? "Clearing…" : "Clear all usage history")
+        <button class="danger-button" disabled="@State.ClearingUsage" @onclick="ClearAllUsageAsync">
+            @(State.ClearingUsage ? "Clearing…" : "Clear all usage history")
         </button>
     </div>
 </div>
 
-@if (_error is not null)
+@if (State.Error is not null)
 {
-    <p class="error-message" role="alert">@_error</p>
+    <p class="error-message" role="alert">@State.Error</p>
 }
 
-@if (_message is not null)
+@if (State.Message is not null)
 {
-    <p class="success-message" role="status">@_message</p>
+    <p class="success-message" role="status">@State.Message</p>
 }
 
 <section class="manual-device">
     <h2>Add a manual device</h2>
     <div class="form-grid">
-        <label>Name <input @bind="_manualName" maxlength="100" /></label>
-        <label>IP address or subnet <input @bind="_manualAddress" placeholder="192.168.88.10 or 192.168.90.0/24" /></label>
-        <label>MAC address <input @bind="_manualMac" placeholder="AA:BB:CC:DD:EE:FF" /></label>
-        <label>Type <input @bind="_manualType" maxlength="50" /></label>
-        <label class="notes">Notes <textarea @bind="_manualNotes" maxlength="2000"></textarea></label>
+        <label>Name <input @bind="State.ManualName" maxlength="100" /></label>
+        <label>IP address or subnet <input @bind="State.ManualAddress" placeholder="192.168.88.10 or 192.168.90.0/24" /></label>
+        <label>MAC address <input @bind="State.ManualMac" placeholder="AA:BB:CC:DD:EE:FF" /></label>
+        <label>Type <input @bind="State.ManualType" maxlength="50" /></label>
+        <label class="notes">Notes <textarea @bind="State.ManualNotes" maxlength="2000"></textarea></label>
     </div>
-    <button class="primary-button" disabled="@_saving" @onclick="CreateManualAsync">Add device</button>
+    <button class="primary-button" disabled="@State.Saving" @onclick="CreateManualAsync">Add device</button>
 </section>
 
-@if (_devices is null)
+@if (!State.IsLoaded)
 {
     <p>Loading devices…</p>
 }
-else if (_devices.Count == 0)
+else if (State.Devices.Count == 0)
 {
     <p class="empty-state">No devices yet. Active DHCP leases will appear after the next router synchronization.</p>
 }
 else
 {
     <div class="device-list">
-        @foreach (var device in _devices)
+        @foreach (var device in State.Devices)
         {
             <article class="device-card" @key="device.Id">
                 <div>
-                    @if (_editingId == device.Id)
+                    @if (State.EditingId == device.Id)
                     {
-                        <input aria-label="Friendly name" @bind="_editName" maxlength="100" />
-                        <button disabled="@_saving" @onclick="() => RenameAsync(device.Id)">Save</button>
-                        <button disabled="@_saving" @onclick="CancelRename">Cancel</button>
+                        <input aria-label="Friendly name" @bind="State.EditName" maxlength="100" />
+                        <button disabled="@State.Saving" @onclick="() => RenameAsync(device.Id)">Save</button>
+                        <button disabled="@State.Saving" @onclick="CancelRename">Cancel</button>
                     }
                     else
                     {
@@ -78,75 +79,77 @@ else
 }
 
 @code {
-    private List<DeviceSummaryResponse>? _devices;
-    private string? _error;
-    private string? _message;
-    private string? _editingId;
-    private string? _editName;
-    private string _manualName = string.Empty;
-    private string _manualAddress = string.Empty;
-    private string _manualMac = string.Empty;
-    private string _manualType = "Client";
-    private string _manualNotes = string.Empty;
-    private bool _saving;
-    private bool _clearingUsage;
-
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
     private async Task LoadAsync()
     {
         try
         {
-            _devices = await _http.GetFromJsonAsync<List<DeviceSummaryResponse>>("api/devices") ?? [];
-            _error = null;
+            var devices = await _http.GetFromJsonAsync<List<DeviceSummaryResponse>>("api/devices") ?? [];
+            Reactive.Batch(() =>
+            {
+                State.Devices.ReplaceAll(devices);
+                State.IsLoaded = true;
+                State.Error = null;
+            });
         }
         catch (HttpRequestException)
         {
-            _error = "Device data could not be loaded.";
+            State.Error = "Device data could not be loaded.";
         }
     }
 
     private void BeginRename(DeviceSummaryResponse device)
     {
-        _editingId = device.Id;
-        _editName = device.FriendlyName ?? device.DisplayName;
+        Reactive.Batch(() =>
+        {
+            State.EditingId = device.Id;
+            State.EditName = device.FriendlyName ?? device.DisplayName;
+        });
     }
 
     private void CancelRename()
     {
-        _editingId = null;
-        _editName = null;
+        Reactive.Batch(() =>
+        {
+            State.EditingId = null;
+            State.EditName = null;
+        });
     }
 
     private async Task RenameAsync(string id)
     {
-        if (_editName?.Trim().Length > 100)
+        if (State.EditName?.Trim().Length > 100)
         {
-            _error = "Friendly names cannot exceed 100 characters.";
+            State.Error = "Friendly names cannot exceed 100 characters.";
             return;
         }
 
-        _saving = true;
-        _error = null;
+        State.Saving = true;
+        State.Error = null;
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Patch, $"api/devices/{id}")
             {
-                Content = JsonContent.Create(new RenameDeviceRequest(_editName))
+                Content = JsonContent.Create(new RenameDeviceRequest(State.EditName))
             };
             using var response = await _http.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
-                _error = "The friendly name could not be saved.";
+                State.Error = "The friendly name could not be saved.";
                 return;
             }
 
             CancelRename();
             await LoadAsync();
         }
+        catch (HttpRequestException)
+        {
+            State.Error = "The friendly name could not be saved.";
+        }
         finally
         {
-            _saving = false;
+            State.Saving = false;
         }
     }
 
@@ -157,29 +160,36 @@ else
             return;
         }
 
-        _saving = true;
-        _error = null;
+        State.Saving = true;
+        State.Error = null;
         try
         {
             using var response = await _http.PostAsJsonAsync(
                 "api/devices/manual",
-                new CreateManualDeviceRequest(_manualName, _manualAddress, _manualMac, _manualType, _manualNotes));
+                new CreateManualDeviceRequest(State.ManualName, State.ManualAddress, State.ManualMac, State.ManualType, State.ManualNotes));
             if (!response.IsSuccessStatusCode)
             {
-                _error = "Check the manual device values and try again.";
+                State.Error = "Check the manual device values and try again.";
                 return;
             }
 
-            _manualName = string.Empty;
-            _manualAddress = string.Empty;
-            _manualMac = string.Empty;
-            _manualType = "Client";
-            _manualNotes = string.Empty;
+            Reactive.Batch(() =>
+            {
+                State.ManualName = string.Empty;
+                State.ManualAddress = string.Empty;
+                State.ManualMac = string.Empty;
+                State.ManualType = "Client";
+                State.ManualNotes = string.Empty;
+            });
             await LoadAsync();
+        }
+        catch (HttpRequestException)
+        {
+            State.Error = "The manual device could not be saved. Check the server status and try again.";
         }
         finally
         {
-            _saving = false;
+            State.Saving = false;
         }
     }
 
@@ -193,67 +203,67 @@ else
             return;
         }
 
-        _clearingUsage = true;
-        _error = null;
-        _message = null;
+        State.ClearingUsage = true;
+        State.Error = null;
+        State.Message = null;
         try
         {
             using var response = await _http.DeleteAsync("api/usage");
             if (!response.IsSuccessStatusCode)
             {
-                _error = "Usage history could not be cleared.";
+                State.Error = "Usage history could not be cleared.";
                 return;
             }
 
-            _message = "Usage history was cleared for all devices.";
+            State.Message = "Usage history was cleared for all devices.";
         }
         catch (HttpRequestException)
         {
-            _error = "Usage history could not be cleared.";
+            State.Error = "Usage history could not be cleared.";
         }
         finally
         {
-            _clearingUsage = false;
+            State.ClearingUsage = false;
         }
     }
 
     private bool ValidateManualDevice()
     {
-        var name = _manualName.Trim();
+        var name = State.ManualName.Trim();
         if (name.Length is 0 or > 100)
         {
-            _error = "A name of at most 100 characters is required.";
+            State.Error = "A name of at most 100 characters is required.";
             return false;
         }
 
-        var address = _manualAddress.Trim();
+        var address = State.ManualAddress.Trim();
         if (address.Length > 0 &&
             !IPAddress.TryParse(address, out _) &&
             !IPNetwork.TryParse(address, out _))
         {
-            _error = "Enter a valid IP address or subnet.";
+            State.Error = "Enter a valid IP address or subnet.";
             return false;
         }
 
-        if (!IsValidMacAddress(_manualMac))
+        if (!IsValidMacAddress(State.ManualMac))
         {
-            _error = "Enter a valid MAC address.";
+            State.Error = "Enter a valid MAC address.";
             return false;
         }
 
-        if (_manualType.Trim().Length > 50)
+        if (State.ManualType.Trim().Length > 50)
         {
-            _error = "Device types cannot exceed 50 characters.";
+            State.Error = "Device types cannot exceed 50 characters.";
             return false;
         }
 
-        if (_manualNotes.Length > 2_000)
+        if (State.ManualNotes.Length > 2_000)
         {
-            _error = "Notes cannot exceed 2,000 characters.";
+            State.Error = "Notes cannot exceed 2,000 characters.";
             return false;
         }
 
-        _error = null;
+        State.Error = null;
         return true;
     }
 

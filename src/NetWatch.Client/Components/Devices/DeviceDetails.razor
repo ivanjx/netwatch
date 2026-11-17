@@ -1,54 +1,54 @@
 @page "/devices/{Id}"
-@implements IAsyncDisposable
 @inject HttpClient _http
 @inject Microsoft.JSInterop.IJSRuntime _js
+@inject DeviceDetailsState State
 @using NetWatch.Core.Diagnostics
 @using NetWatch.Core.Devices
 @using NetWatch.Core.Live
 @using NetWatch.Core.Usage
 
-<PageTitle>@(_device?.DisplayName ?? "Device") — NetWatch</PageTitle>
+<PageTitle>@(State.Device?.DisplayName ?? "Device") — NetWatch</PageTitle>
 
-@if (_loading)
+@if (State.Loading)
 {
     <div class="detail-loading" aria-label="Loading device details"><span></span><span></span><span></span></div>
 }
-else if (_error is not null)
+else if (State.Error is not null)
 {
     <section class="detail-state" role="alert">
         <strong>Device details are unavailable</strong>
-        <p>@_error</p>
+        <p>@State.Error</p>
         <a class="secondary-button" href="devices">Back to devices</a>
     </section>
 }
-else if (_device is not null)
+else if (State.Device is not null)
 {
     <div class="page-heading">
         <div>
             <a class="back-link" href="devices"><AppIcon Name="arrow-left" />Devices</a>
-            <h1>@_device.DisplayName</h1>
-            <p>@(_device.DiscoveredName ?? "Manually managed device")</p>
+            <h1>@State.Device.DisplayName</h1>
+            <p>@(State.Device.DiscoveredName ?? "Manually managed device")</p>
         </div>
         <div class="heading-actions">
-            <span class="status-pill @DeviceStatusClass">
-                <AppIcon Name="status" />@DeviceStatusLabel
+            <span class="status-pill @State.DeviceStatusClass">
+                <AppIcon Name="status" />@State.DeviceStatusLabel
             </span>
-            <button class="danger-button" disabled="@_clearingUsage" @onclick="ClearUsageAsync">
-                @(_clearingUsage ? "Clearing…" : "Clear usage history")
+            <button class="danger-button" disabled="@State.ClearingUsage" @onclick="ClearUsageAsync">
+                @(State.ClearingUsage ? "Clearing…" : "Clear usage history")
             </button>
         </div>
     </div>
 
-    @if (_usageError is not null)
+    @if (State.UsageError is not null)
     {
-        <p class="range-error" role="alert">@_usageError</p>
+        <p class="range-error" role="alert">@State.UsageError</p>
     }
 
     <section class="stat-grid" aria-label="Device period totals">
-        <UsageStatCard Label="Today" PrimaryBytes="@Total(_today)" Detail="@Split(_today)" Icon="activity" />
-        <UsageStatCard Label="This week" PrimaryBytes="@Total(_week)" Detail="@Split(_week)" Icon="activity" AccentClass="accent-violet" />
-        <UsageStatCard Label="This month" PrimaryBytes="@Total(_month)" Detail="@Split(_month)" Icon="activity" AccentClass="accent-green" />
-        <UsageStatCard Label="Current speed" Value="@Helpers.BitsPerSecond(CurrentSpeed)" Detail="@CurrentSpeedDetail" Icon="online" AccentClass="accent-amber" />
+        <UsageStatCard Label="Today" PrimaryBytes="@Total(State.Today)" Detail="@Split(State.Today)" Icon="activity" />
+        <UsageStatCard Label="This week" PrimaryBytes="@Total(State.Week)" Detail="@Split(State.Week)" Icon="activity" AccentClass="accent-violet" />
+        <UsageStatCard Label="This month" PrimaryBytes="@Total(State.Month)" Detail="@Split(State.Month)" Icon="activity" AccentClass="accent-green" />
+        <UsageStatCard Label="Current speed" Value="@Helpers.BitsPerSecond(State.CurrentSpeed)" Detail="@State.CurrentSpeedDetail" Icon="online" AccentClass="accent-amber" />
     </section>
 
     <div class="detail-grid">
@@ -56,25 +56,25 @@ else if (_device is not null)
             <div class="panel-heading history-heading">
                 <div><p class="eyebrow">Selected range</p><h2>Usage history</h2></div>
                 <div class="date-range">
-                    <label>From<input type="date" @bind="_fromDate" /></label>
-                    <label>Through<input type="date" @bind="_toDate" /></label>
-                    <button class="secondary-button" disabled="@_historyLoading" @onclick="LoadHistoryAsync">Apply</button>
+                    <label>From<input type="date" @bind="State.FromDate" /></label>
+                    <label>Through<input type="date" @bind="State.ToDate" /></label>
+                    <button class="secondary-button" disabled="@State.HistoryLoading" @onclick="LoadHistoryAsync">Apply</button>
                 </div>
             </div>
-            @if (_rangeError is not null)
+            @if (State.RangeError is not null)
             {
-                <p class="range-error" role="alert">@_rangeError</p>
+                <p class="range-error" role="alert">@State.RangeError</p>
             }
-            else if (_historyLoading)
+            else if (State.HistoryLoading)
             {
                 <div class="history-loading">Loading history…</div>
             }
             else
             {
-                <UsageBarChart Points="@(_history?.Points ?? [])" />
+                <UsageBarChart Points="@(State.History?.Points ?? [])" />
                 <div class="range-total">
                     <span>Range total</span>
-                    <strong>@Helpers.Bytes(HistoryTotal)</strong>
+                    <strong>@Helpers.Bytes(State.HistoryTotal)</strong>
                 </div>
             }
         </section>
@@ -82,22 +82,22 @@ else if (_device is not null)
         <aside class="panel identity-panel">
             <div class="panel-heading"><div><p class="eyebrow">Identity</p><h2>Device information</h2></div></div>
             <dl>
-                <div><dt>Current IP</dt><dd class="selectable-text">@(_device.CurrentIpAddress ?? "Not assigned")</dd></div>
-                <div><dt>MAC address</dt><dd class="selectable-text">@(_device.MacAddress ?? "Not recorded")</dd></div>
-                <div><dt>Type</dt><dd>@_device.Type</dd></div>
-                <div><dt>Source</dt><dd>@(_device.IsManual ? "Manual" : "DHCP")</dd></div>
-                <div><dt>Last seen</dt><dd>@(_device.LastSeen ?? "Not reported")</dd></div>
+                <div><dt>Current IP</dt><dd class="selectable-text">@(State.Device.CurrentIpAddress ?? "Not assigned")</dd></div>
+                <div><dt>MAC address</dt><dd class="selectable-text">@(State.Device.MacAddress ?? "Not recorded")</dd></div>
+                <div><dt>Type</dt><dd>@State.Device.Type</dd></div>
+                <div><dt>Source</dt><dd>@(State.Device.IsManual ? "Manual" : "DHCP")</dd></div>
+                <div><dt>Last seen</dt><dd>@(State.Device.LastSeen ?? "Not reported")</dd></div>
             </dl>
-            @if (!string.IsNullOrWhiteSpace(_device.Notes))
+            @if (!string.IsNullOrWhiteSpace(State.Device.Notes))
             {
-                <div class="notes"><span>Notes</span><p class="selectable-text">@_device.Notes</p></div>
+                <div class="notes"><span>Notes</span><p class="selectable-text">@State.Device.Notes</p></div>
             }
         </aside>
     </div>
 
     <section class="panel assignments-panel">
         <div class="panel-heading"><div><p class="eyebrow">Address history</p><h2>IP assignments</h2></div></div>
-        @if (_device.IpAssignments.Count == 0)
+        @if (State.Device.IpAssignments.Count == 0)
         {
             <p class="empty-copy">No IP assignments have been recorded.</p>
         }
@@ -107,7 +107,7 @@ else if (_device is not null)
                 <table>
                     <thead><tr><th>IP address</th><th>Source</th><th>Assigned</th><th>Ended</th></tr></thead>
                     <tbody>
-                        @foreach (var assignment in _device.IpAssignments)
+                        @foreach (var assignment in State.Device.IpAssignments)
                         {
                             <tr>
                                 <td class="selectable-text"><code>@assignment.IpAddress</code></td>
@@ -126,48 +126,10 @@ else if (_device is not null)
 @code {
     [Parameter] public string Id { get; set; } = string.Empty;
 
-    private DeviceDetailsResponse? _device;
-    private SystemStatusResponse? _status;
-    private UsageSummaryResponse? _summary;
-    private UsageTotalsResponse _today = EmptyTotals;
-    private UsageTotalsResponse _week = EmptyTotals;
-    private UsageTotalsResponse _month = EmptyTotals;
-    private UsageHistoryResponse? _history;
-    private LiveTrafficRateResponse? _liveTraffic;
-    private DateTime _fromDate;
-    private DateTime _toDate;
-    private string? _error;
-    private string? _rangeError;
-    private string? _usageError;
-    private bool _loading = true;
-    private bool _historyLoading;
-    private bool _clearingUsage;
     private readonly PeriodicTimer _refreshTimer = new(TimeSpan.FromSeconds(2));
-    private readonly CancellationTokenSource _refreshCancellation = new();
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
     private readonly SemaphoreSlim _loadLock = new(1, 1);
     private Task? _refreshTask;
-
-    private string DeviceStatusClass => _device switch
-    {
-        { IsManual: true } => "static",
-        { IsOnline: true } => "online",
-        _ => "offline"
-    };
-
-    private string DeviceStatusLabel => _device switch
-    {
-        { IsManual: true } => "Static",
-        { IsOnline: true } => "Online",
-        _ => "Offline"
-    };
-
-    private static UsageTotalsResponse EmptyTotals => new(0, 0, 0, 0);
-    private long HistoryTotal => _history?.Points.Sum(point => point.Totals.DownloadBytes + point.Totals.UploadBytes) ?? 0;
-    private long CurrentSpeed =>
-        (_liveTraffic?.DownloadBitsPerSecond ?? 0) + (_liveTraffic?.UploadBitsPerSecond ?? 0);
-    private string CurrentSpeedDetail =>
-        $"{Helpers.BitsPerSecond(_liveTraffic?.DownloadBitsPerSecond ?? 0)} down · " +
-        $"{Helpers.BitsPerSecond(_liveTraffic?.UploadBitsPerSecond ?? 0)} up";
 
     protected override async Task OnParametersSetAsync()
     {
@@ -186,49 +148,61 @@ else if (_device is not null)
 
     private async Task LoadDeviceAsync(bool showLoading, bool resetRange)
     {
-        if (showLoading)
+        Reactive.Batch(() =>
         {
-            _loading = true;
-        }
+            if (showLoading)
+            {
+                State.Loading = true;
+            }
 
-        _error = null;
+            State.Error = null;
+        });
+
         try
         {
-            var deviceTask = _http.GetFromJsonAsync<DeviceDetailsResponse>($"api/devices/{Uri.EscapeDataString(Id)}");
-            var summaryTask = _http.GetFromJsonAsync<UsageSummaryResponse>("api/usage/summary");
-            var statusTask = _http.GetFromJsonAsync<SystemStatusResponse>("api/status");
-            var liveTrafficTask = _http.GetFromJsonAsync<LiveTrafficSnapshotResponse>("api/live");
+            var cancellationToken = _lifetimeCancellation.Token;
+            var deviceTask = _http.GetFromJsonAsync<DeviceDetailsResponse>($"api/devices/{Uri.EscapeDataString(Id)}", cancellationToken);
+            var summaryTask = _http.GetFromJsonAsync<UsageSummaryResponse>("api/usage/summary", cancellationToken);
+            var statusTask = _http.GetFromJsonAsync<SystemStatusResponse>("api/status", cancellationToken);
+            var liveTrafficTask = _http.GetFromJsonAsync<LiveTrafficSnapshotResponse>("api/live", cancellationToken);
             await Task.WhenAll(deviceTask, summaryTask, statusTask, liveTrafficTask);
-            _device = await deviceTask;
-            _summary = await summaryTask;
-            _status = await statusTask;
+            var device = await deviceTask;
+            var summary = await summaryTask;
+            var status = await statusTask;
             var liveTraffic = await liveTrafficTask;
-            _liveTraffic = liveTraffic?.Devices.FirstOrDefault(device => device.DeviceId == Id)?.Rate;
-            if (_device is null || _summary is null || _status is null)
+            if (device is null || summary is null || status is null)
             {
-                _error = "NetWatch returned an incomplete device record.";
+                Reactive.Batch(() =>
+                {
+                    State.Device = device;
+                    State.Summary = summary;
+                    State.Status = status;
+                    State.LiveTraffic = liveTraffic?.Devices.FirstOrDefault(entry => entry.DeviceId == Id)?.Rate;
+                    State.Error = "NetWatch returned an incomplete device record.";
+                });
                 return;
             }
 
-            if (resetRange)
+            Reactive.Batch(() =>
             {
-                var reportingToday = _status.CurrentTime.Date;
-                _fromDate = new DateTime(reportingToday.Year, reportingToday.Month, 1);
-                _toDate = reportingToday;
-            }
+                State.Device = device;
+                State.Summary = summary;
+                State.Status = status;
+                State.LiveTraffic = liveTraffic?.Devices.FirstOrDefault(entry => entry.DeviceId == Id)?.Rate;
+                if (resetRange)
+                {
+                    var reportingToday = status.CurrentTime.Date;
+                    State.FromDate = new DateTime(reportingToday.Year, reportingToday.Month, 1);
+                    State.ToDate = reportingToday;
+                }
+            });
 
-            var todayTask = LoadDeviceTotalsAsync(_summary.Today);
-            var weekTask = LoadDeviceTotalsAsync(_summary.Week);
-            var monthTask = LoadDeviceTotalsAsync(_summary.Month);
-            await Task.WhenAll(todayTask, weekTask, monthTask);
-            _today = await todayTask;
-            _week = await weekTask;
-            _month = await monthTask;
+            await LoadTotalsAsync(summary);
             await LoadHistoryAsync(showLoading);
         }
         catch (HttpRequestException exception)
         {
-            _error = exception.StatusCode == System.Net.HttpStatusCode.NotFound ?
+            State.Error = exception.StatusCode == System.Net.HttpStatusCode.NotFound ?
                 "This device does not exist or has been archived." :
                 "NetWatch could not load this device. Try again after checking the server status.";
         }
@@ -236,59 +210,84 @@ else if (_device is not null)
         {
             if (showLoading)
             {
-                _loading = false;
+                State.Loading = false;
             }
         }
+    }
+
+    private async Task LoadTotalsAsync(UsageSummaryResponse summary)
+    {
+        var todayTask = LoadDeviceTotalsAsync(summary.Today);
+        var weekTask = LoadDeviceTotalsAsync(summary.Week);
+        var monthTask = LoadDeviceTotalsAsync(summary.Month);
+        await Task.WhenAll(todayTask, weekTask, monthTask);
+        var today = await todayTask;
+        var week = await weekTask;
+        var month = await monthTask;
+        Reactive.Batch(() =>
+        {
+            State.Today = today;
+            State.Week = week;
+            State.Month = month;
+        });
     }
 
     private async Task<UsageTotalsResponse> LoadDeviceTotalsAsync(UsagePeriodResponse period)
     {
         var from = Uri.EscapeDataString(period.FromUtc.ToString("O"));
         var to = Uri.EscapeDataString(period.ToUtc.ToString("O"));
-        var devices = await _http.GetFromJsonAsync<List<DeviceUsageResponse>>($"api/usage/devices?from={from}&to={to}") ?? [];
-        return devices.FirstOrDefault(device => device.DeviceId == Id)?.Totals ?? EmptyTotals;
+        var devices = await _http.GetFromJsonAsync<List<DeviceUsageResponse>>(
+            $"api/usage/devices?from={from}&to={to}",
+            _lifetimeCancellation.Token) ?? [];
+        return devices.FirstOrDefault(device => device.DeviceId == Id)?.Totals ?? DeviceDetailsState.EmptyTotals;
     }
 
     private Task LoadHistoryAsync() => LoadHistoryAsync(showLoading: true);
 
     private async Task LoadHistoryAsync(bool showLoading)
     {
-        _rangeError = null;
-        if (_fromDate > _toDate)
+        var fromDate = State.FromDate;
+        var toDate = State.ToDate;
+        if (fromDate > toDate)
         {
-            _rangeError = "Choose a valid range with the start on or before the end.";
+            State.RangeError = "Choose a valid range with the start on or before the end.";
             return;
         }
 
-        var dayCount = (_toDate.Date - _fromDate.Date).Days + 1;
+        var dayCount = (toDate.Date - fromDate.Date).Days + 1;
         if (dayCount > 370)
         {
-            _rangeError = "Choose a date range of 370 days or fewer.";
+            State.RangeError = "Choose a date range of 370 days or fewer.";
             return;
         }
 
-        if (showLoading)
+        Reactive.Batch(() =>
         {
-            _historyLoading = true;
-        }
+            State.RangeError = null;
+            if (showLoading)
+            {
+                State.HistoryLoading = true;
+            }
+        });
 
         try
         {
-            var from = _fromDate.ToString("yyyy-MM-dd");
-            var toExclusive = _toDate.AddDays(1).ToString("yyyy-MM-dd");
+            var from = fromDate.ToString("yyyy-MM-dd");
+            var toExclusive = toDate.AddDays(1).ToString("yyyy-MM-dd");
             var grouping = dayCount > 90 ? "month" : "day";
-            _history = await _http.GetFromJsonAsync<UsageHistoryResponse>(
-                $"api/usage/history?from={from}&to={toExclusive}&grouping={grouping}&deviceId={Uri.EscapeDataString(Id)}");
+            State.History = await _http.GetFromJsonAsync<UsageHistoryResponse>(
+                $"api/usage/history?from={from}&to={toExclusive}&grouping={grouping}&deviceId={Uri.EscapeDataString(Id)}",
+                _lifetimeCancellation.Token);
         }
         catch (HttpRequestException)
         {
-            _rangeError = "Usage history could not be loaded for that range.";
+            State.RangeError = "Usage history could not be loaded for that range.";
         }
         finally
         {
             if (showLoading)
             {
-                _historyLoading = false;
+                State.HistoryLoading = false;
             }
         }
     }
@@ -297,12 +296,12 @@ else if (_device is not null)
     {
         try
         {
-            while (await _refreshTimer.WaitForNextTickAsync(_refreshCancellation.Token))
+            while (await _refreshTimer.WaitForNextTickAsync(_lifetimeCancellation.Token))
             {
                 await InvokeAsync(RefreshAsync);
             }
         }
-        catch (OperationCanceledException) when (_refreshCancellation.IsCancellationRequested)
+        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
         {
         }
     }
@@ -316,12 +315,12 @@ else if (_device is not null)
 
         try
         {
-            await LoadDeviceAsync(showLoading: false, resetRange: false);
+            // A background refresh shows its result in one render, never the cleared error or a half-loaded record.
+            await Reactive.BatchAsync(() => LoadDeviceAsync(showLoading: false, resetRange: false));
         }
         finally
         {
             _loadLock.Release();
-            StateHasChanged();
         }
     }
 
@@ -329,39 +328,42 @@ else if (_device is not null)
     {
         var confirmed = await _js.InvokeAsync<bool>(
             "confirm",
-            [$"Clear all usage history for {_device!.DisplayName}? This cannot be undone."]);
+            [$"Clear all usage history for {State.Device!.DisplayName}? This cannot be undone."]);
         if (!confirmed)
         {
             return;
         }
 
-        _clearingUsage = true;
-        _usageError = null;
+        // Hold the load lock so a refresh that started before the delete cannot write the old totals afterwards.
+        await _loadLock.WaitAsync(_lifetimeCancellation.Token);
         try
         {
-            using var response = await _http.DeleteAsync($"api/usage/devices/{Uri.EscapeDataString(Id)}");
+            Reactive.Batch(() =>
+            {
+                State.ClearingUsage = true;
+                State.UsageError = null;
+            });
+
+            using var response = await _http.DeleteAsync(
+                $"api/usage/devices/{Uri.EscapeDataString(Id)}",
+                _lifetimeCancellation.Token);
             if (!response.IsSuccessStatusCode)
             {
-                _usageError = "Usage history could not be cleared.";
+                State.UsageError = "Usage history could not be cleared.";
                 return;
             }
 
-            var todayTask = LoadDeviceTotalsAsync(_summary!.Today);
-            var weekTask = LoadDeviceTotalsAsync(_summary.Week);
-            var monthTask = LoadDeviceTotalsAsync(_summary.Month);
-            await Task.WhenAll(todayTask, weekTask, monthTask);
-            _today = await todayTask;
-            _week = await weekTask;
-            _month = await monthTask;
+            await LoadTotalsAsync(State.Summary!);
             await LoadHistoryAsync();
         }
         catch (HttpRequestException)
         {
-            _usageError = "Usage history could not be cleared.";
+            State.UsageError = "Usage history could not be cleared.";
         }
         finally
         {
-            _clearingUsage = false;
+            State.ClearingUsage = false;
+            _loadLock.Release();
         }
     }
 
@@ -370,9 +372,9 @@ else if (_device is not null)
     private static string Split(UsageTotalsResponse totals) =>
         $"{Helpers.Bytes(totals.DownloadBytes)} down · {Helpers.Bytes(totals.UploadBytes)} up";
 
-    public async ValueTask DisposeAsync()
+    protected override async ValueTask DisposeAsyncCore()
     {
-        await _refreshCancellation.CancelAsync();
+        await _lifetimeCancellation.CancelAsync();
         _refreshTimer.Dispose();
 
         if (_refreshTask is not null)
@@ -380,7 +382,9 @@ else if (_device is not null)
             await _refreshTask;
         }
 
-        _refreshCancellation.Dispose();
-        _loadLock.Dispose();
+        // The source and the lock are not disposed: a cancelled load can still be unwinding and release the lock.
+        // Neither owns a timer or wait handle, so there is nothing to free.
+
+        await base.DisposeAsyncCore();
     }
 }

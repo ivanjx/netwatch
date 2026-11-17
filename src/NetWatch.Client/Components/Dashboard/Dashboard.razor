@@ -1,6 +1,6 @@
 @page "/"
-@implements IAsyncDisposable
 @inject HttpClient _http
+@inject DashboardState State
 @using NetWatch.Core.Live
 @using NetWatch.Core.Usage
 
@@ -14,7 +14,7 @@
     </div>
 </div>
 
-@if (_loading)
+@if (State.Loading)
 {
     <div class="skeleton-grid" aria-label="Loading dashboard">
         @for (var index = 0; index < 4; index++)
@@ -23,15 +23,15 @@
         }
     </div>
 }
-else if (_error is not null)
+else if (State.Error is not null)
 {
     <section class="state-panel error-state" role="alert">
         <span class="state-icon"><AppIcon Name="alert" /></span>
-        <div><strong>Dashboard data is unavailable</strong><p>@_error</p></div>
+        <div><strong>Dashboard data is unavailable</strong><p>@State.Error</p></div>
         <button class="secondary-button" @onclick="LoadAsync">Try again</button>
     </section>
 }
-else if (_summary is not null)
+else if (State.Summary is not null)
 {
     <div class="period-tabs" aria-label="Usage period">
         <button class="@TodayPeriodClass" @onclick="SelectTodayAsync">Today</button>
@@ -40,29 +40,29 @@ else if (_summary is not null)
     </div>
 
     <section class="stat-grid" aria-label="Network totals">
-        <UsageStatCard Label="Total download" PrimaryBytes="@SelectedPeriod.Totals.DownloadBytes"
-                       Detail="@($"{Helpers.Number(SelectedPeriod.Totals.DownloadPackets)} packets")" Icon="download" />
-        <UsageStatCard Label="Total upload" PrimaryBytes="@SelectedPeriod.Totals.UploadBytes"
-                       Detail="@($"{Helpers.Number(SelectedPeriod.Totals.UploadPackets)} packets")" Icon="upload" AccentClass="accent-violet" />
-        <UsageStatCard Label="Total traffic" PrimaryBytes="@(SelectedPeriod.Totals.DownloadBytes + SelectedPeriod.Totals.UploadBytes)"
-                       Detail="@PeriodLabel" Icon="activity" AccentClass="accent-green" />
-        <UsageStatCard Label="Current speed" Value="@Helpers.BitsPerSecond(CurrentNetworkSpeed)"
-                       Detail="@CurrentNetworkSpeedDetail" Icon="online" AccentClass="accent-amber" />
+        <UsageStatCard Label="Total download" PrimaryBytes="@State.SelectedPeriod.Totals.DownloadBytes"
+                       Detail="@($"{Helpers.Number(State.SelectedPeriod.Totals.DownloadPackets)} packets")" Icon="download" />
+        <UsageStatCard Label="Total upload" PrimaryBytes="@State.SelectedPeriod.Totals.UploadBytes"
+                       Detail="@($"{Helpers.Number(State.SelectedPeriod.Totals.UploadPackets)} packets")" Icon="upload" AccentClass="accent-violet" />
+        <UsageStatCard Label="Total traffic" PrimaryBytes="@(State.SelectedPeriod.Totals.DownloadBytes + State.SelectedPeriod.Totals.UploadBytes)"
+                       Detail="@State.PeriodLabel" Icon="activity" AccentClass="accent-green" />
+        <UsageStatCard Label="Current speed" Value="@Helpers.BitsPerSecond(State.CurrentNetworkSpeed)"
+                       Detail="@State.CurrentNetworkSpeedDetail" Icon="online" AccentClass="accent-amber" />
     </section>
 
     <div class="dashboard-grid">
         <section class="panel chart-panel">
             <div class="panel-heading">
                 <div><p class="eyebrow">Network-wide</p><h2>Internet usage</h2></div>
-                <span>@ChartCaption</span>
+                <span>@State.ChartCaption</span>
             </div>
-            @if (_periodLoading)
+            @if (State.PeriodLoading)
             {
                 <div class="chart-loading">Loading usage…</div>
             }
             else
             {
-                <UsageBarChart Points="@(_history?.Points ?? [])" />
+                <UsageBarChart Points="@(State.History?.Points ?? [])" />
             }
         </section>
 
@@ -71,19 +71,20 @@ else if (_summary is not null)
                 <div><p class="eyebrow">Ranked by traffic</p><h2>Top devices</h2></div>
                 <a href="devices">View all</a>
             </div>
-            @if (_deviceUsage.Count == 0)
+            @if (State.DeviceUsage.Count == 0)
             {
                 <div class="compact-empty">No device usage for this period.</div>
             }
             else
             {
                 <ol class="ranking-list">
-                    @foreach (var device in _deviceUsage.Take(6))
+                    @for (var index = 0; index < Math.Min(6, State.DeviceUsage.Count); index++)
                     {
+                        var device = State.DeviceUsage[index];
                         var total = device.Totals.DownloadBytes + device.Totals.UploadBytes;
                         <li>
-                            <span class="rank">@(Array.IndexOf(_deviceUsage.ToArray(), device) + 1)</span>
-                            <div><a href="@($"devices/{device.DeviceId}")">@device.DisplayName</a><span>@Share(total)</span></div>
+                            <span class="rank">@(State.DeviceUsage.IndexOf(device) + 1)</span>
+                            <div><a href="@($"devices/{device.DeviceId}")">@device.DisplayName</a><span>@State.Share(total)</span></div>
                             <strong>@Helpers.Bytes(total)</strong>
                         </li>
                     }
@@ -97,7 +98,7 @@ else if (_summary is not null)
             <div><p class="eyebrow">Historical totals</p><h2>Device usage</h2></div>
             <a class="secondary-button" href="devices">Manage devices</a>
         </div>
-        @if (_deviceUsage.Count == 0)
+        @if (State.DeviceUsage.Count == 0)
         {
             <div class="compact-empty">Devices will appear after discovery and the first usage flush.</div>
         }
@@ -107,17 +108,17 @@ else if (_summary is not null)
                 <table>
                     <thead><tr><th>Device</th><th>MAC address</th><th>Current speed</th><th>Download</th><th>Upload</th><th>Total</th><th>Share</th></tr></thead>
                     <tbody>
-                        @foreach (var device in _deviceUsage)
+                        @foreach (var device in State.DeviceUsage)
                         {
                             var total = device.Totals.DownloadBytes + device.Totals.UploadBytes;
                             <tr>
                                 <td><a href="@($"devices/{device.DeviceId}")">@device.DisplayName</a></td>
                                 <td class="mac-address selectable-text">@(device.MacAddress ?? "—")</td>
-                                <td>@Helpers.BitsPerSecond(CurrentSpeed(device.DeviceId))</td>
+                                <td>@Helpers.BitsPerSecond(State.CurrentSpeed(device.DeviceId))</td>
                                 <td class="download-value">@Helpers.Bytes(device.Totals.DownloadBytes)</td>
                                 <td class="upload-value">@Helpers.Bytes(device.Totals.UploadBytes)</td>
                                 <td>@Helpers.Bytes(total)</td>
-                                <td>@Share(total)</td>
+                                <td>@State.Share(total)</td>
                             </tr>
                         }
                     </tbody>
@@ -128,44 +129,14 @@ else if (_summary is not null)
 }
 
 @code {
-    private UsageSummaryResponse? _summary;
-    private UsageHistoryResponse? _history;
-    private LiveTrafficSnapshotResponse? _liveTraffic;
-    private List<DeviceUsageResponse> _deviceUsage = [];
-    private string _selectedPeriod = "today";
-    private string? _error;
-    private bool _loading = true;
-    private bool _periodLoading;
     private readonly PeriodicTimer _refreshTimer = new(TimeSpan.FromSeconds(2));
-    private readonly CancellationTokenSource _refreshCancellation = new();
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
     private readonly SemaphoreSlim _loadLock = new(1, 1);
     private Task? _refreshTask;
 
-    private UsagePeriodResponse SelectedPeriod => _selectedPeriod switch
-    {
-        "week" => _summary!.Week,
-        "month" => _summary!.Month,
-        _ => _summary!.Today
-    };
-
-    private string PeriodLabel => _selectedPeriod switch
-    {
-        "week" => "Since Monday",
-        "month" => "Since the first of the month",
-        _ => "Since local midnight"
-    };
-
-    private string ChartCaption => _selectedPeriod == "today" ? "Hourly totals" : "Daily totals";
-    private string TodayPeriodClass => PeriodClass("today");
-    private string WeekPeriodClass => PeriodClass("week");
-    private string MonthPeriodClass => PeriodClass("month");
-    private long PeriodTotal => SelectedPeriod.Totals.DownloadBytes + SelectedPeriod.Totals.UploadBytes;
-    private long CurrentNetworkSpeed =>
-        (_liveTraffic?.Network.DownloadBitsPerSecond ?? 0) +
-        (_liveTraffic?.Network.UploadBitsPerSecond ?? 0);
-    private string CurrentNetworkSpeedDetail =>
-        $"{Helpers.BitsPerSecond(_liveTraffic?.Network.DownloadBitsPerSecond ?? 0)} down · " +
-        $"{Helpers.BitsPerSecond(_liveTraffic?.Network.UploadBitsPerSecond ?? 0)} up";
+    private string TodayPeriodClass => State.PeriodClass("today");
+    private string WeekPeriodClass => State.PeriodClass("week");
+    private string MonthPeriodClass => State.PeriodClass("month");
 
     protected override async Task OnInitializedAsync()
     {
@@ -190,16 +161,16 @@ else if (_summary is not null)
     {
         if (showLoading)
         {
-            _loading = true;
+            State.Loading = true;
         }
 
-        _error = null;
+        State.Error = null;
         try
         {
-            _summary = await _http.GetFromJsonAsync<UsageSummaryResponse>("api/usage/summary");
-            if (_summary is null)
+            State.Summary = await _http.GetFromJsonAsync<UsageSummaryResponse>("api/usage/summary", _lifetimeCancellation.Token);
+            if (State.Summary is null)
             {
-                _error = "The usage service returned no data.";
+                State.Error = "The usage service returned no data.";
                 return;
             }
 
@@ -207,20 +178,20 @@ else if (_summary is not null)
         }
         catch (HttpRequestException)
         {
-            _error = "NetWatch could not reach the historical usage service. Check the collector status and try again.";
+            State.Error = "NetWatch could not reach the historical usage service. Check the collector status and try again.";
         }
         finally
         {
             if (showLoading)
             {
-                _loading = false;
+                State.Loading = false;
             }
         }
     }
 
     private async Task SelectPeriodAsync(string period)
     {
-        if (_selectedPeriod == period || _summary is null)
+        if (State.SelectedPeriodKey == period || State.Summary is null)
         {
             return;
         }
@@ -228,7 +199,7 @@ else if (_summary is not null)
         await _loadLock.WaitAsync();
         try
         {
-            _selectedPeriod = period;
+            State.SelectedPeriodKey = period;
             await LoadPeriodAsync(showLoading: true);
         }
         finally
@@ -245,34 +216,42 @@ else if (_summary is not null)
     {
         if (showLoading)
         {
-            _periodLoading = true;
+            State.PeriodLoading = true;
         }
 
         try
         {
-            var range = SelectedPeriod;
+            var range = State.SelectedPeriod;
             var from = Uri.EscapeDataString(range.FromUtc.ToString("O"));
             var to = Uri.EscapeDataString(range.ToUtc.ToString("O"));
-            var grouping = _selectedPeriod == "today" ? "hour" : "day";
+            var grouping = State.Grouping;
             var historyTask = _http.GetFromJsonAsync<UsageHistoryResponse>(
-                $"api/usage/history?from={from}&to={to}&grouping={grouping}");
+                $"api/usage/history?from={from}&to={to}&grouping={grouping}",
+                _lifetimeCancellation.Token);
             var devicesTask = _http.GetFromJsonAsync<List<DeviceUsageResponse>>(
-                $"api/usage/devices?from={from}&to={to}");
-            var liveTrafficTask = _http.GetFromJsonAsync<LiveTrafficSnapshotResponse>("api/live");
+                $"api/usage/devices?from={from}&to={to}",
+                _lifetimeCancellation.Token);
+            var liveTrafficTask = _http.GetFromJsonAsync<LiveTrafficSnapshotResponse>("api/live", _lifetimeCancellation.Token);
             await Task.WhenAll(historyTask, devicesTask, liveTrafficTask);
-            _history = await historyTask;
-            _deviceUsage = await devicesTask ?? [];
-            _liveTraffic = await liveTrafficTask;
+            var history = await historyTask;
+            var deviceUsage = await devicesTask ?? [];
+            var liveTraffic = await liveTrafficTask;
+            Reactive.Batch(() =>
+            {
+                State.History = history;
+                State.DeviceUsage.ReplaceAll(deviceUsage);
+                State.LiveTraffic = liveTraffic;
+            });
         }
         catch (HttpRequestException)
         {
-            _error = "Usage for the selected period could not be loaded.";
+            State.Error = "Usage for the selected period could not be loaded.";
         }
         finally
         {
             if (showLoading)
             {
-                _periodLoading = false;
+                State.PeriodLoading = false;
             }
         }
     }
@@ -281,12 +260,12 @@ else if (_summary is not null)
     {
         try
         {
-            while (await _refreshTimer.WaitForNextTickAsync(_refreshCancellation.Token))
+            while (await _refreshTimer.WaitForNextTickAsync(_lifetimeCancellation.Token))
             {
                 await InvokeAsync(RefreshAsync);
             }
         }
-        catch (OperationCanceledException) when (_refreshCancellation.IsCancellationRequested)
+        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
         {
         }
     }
@@ -300,18 +279,18 @@ else if (_summary is not null)
 
         try
         {
-            await LoadDashboardAsync(showLoading: false);
+            // A background refresh shows its result in one render, never the cleared error or a half-loaded period.
+            await Reactive.BatchAsync(() => LoadDashboardAsync(showLoading: false));
         }
         finally
         {
             _loadLock.Release();
-            StateHasChanged();
         }
     }
 
-    public async ValueTask DisposeAsync()
+    protected override async ValueTask DisposeAsyncCore()
     {
-        await _refreshCancellation.CancelAsync();
+        await _lifetimeCancellation.CancelAsync();
         _refreshTimer.Dispose();
 
         if (_refreshTask is not null)
@@ -319,18 +298,10 @@ else if (_summary is not null)
             await _refreshTask;
         }
 
-        _refreshCancellation.Dispose();
-        _loadLock.Dispose();
-    }
+        // The source and the lock are not disposed: a cancelled load can still be unwinding and release the lock.
+        // Neither owns a timer or wait handle, so there is nothing to free.
 
-    private string PeriodClass(string period) => _selectedPeriod == period ? "active" : string.Empty;
-
-    private string Share(long total) => PeriodTotal == 0 ? "0%" : $"{total * 100d / PeriodTotal:0.#}%";
-
-    private long CurrentSpeed(string deviceId)
-    {
-        var rate = _liveTraffic?.Devices.FirstOrDefault(device => device.DeviceId == deviceId)?.Rate;
-        return (rate?.DownloadBitsPerSecond ?? 0) + (rate?.UploadBitsPerSecond ?? 0);
+        await base.DisposeAsyncCore();
     }
 
 }

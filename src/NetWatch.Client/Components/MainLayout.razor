@@ -1,7 +1,6 @@
-@inherits LayoutComponentBase
-@implements IAsyncDisposable
+@inherits ReactiveLayoutComponentBase
 @inject HttpClient _http
-@using System.Globalization
+@inject SystemStatusState State
 @using System.Net.Http.Json
 @using NetWatch.Core.Diagnostics
 
@@ -30,10 +29,10 @@
             <span class="topbar-context">Self-hosted network monitor</span>
             <div class="topbar-meta">
                 <span class="server-clock" title="Time in the configured reporting timezone">
-                    <AppIcon Name="clock" />@ServerTimeText
+                    <AppIcon Name="clock" />@State.ServerTimeText
                 </span>
-                <span class="system-status @SystemStatusClass" title="@SystemStatusTitle">
-                    <AppIcon Name="status" />@SystemStatusText
+                <span class="system-status @State.SystemStatusClass" title="@State.SystemStatusTitle">
+                    <AppIcon Name="status" />@State.SystemStatusText
                 </span>
             </div>
         </header>
@@ -46,59 +45,12 @@
 @code {
     private readonly CancellationTokenSource _clockCancellation = new();
     private readonly PeriodicTimer _clockTimer = new(TimeSpan.FromSeconds(1));
-    private DateTimeOffset? _serverTime;
-    private DateTimeOffset _serverTimeReceivedAtUtc;
-    private DateTimeOffset? _lastDataAtUtc;
-    private string? _reportingTimezone;
     private Task? _clockTask;
     private int _clockTicks;
-    private bool _isOnline;
-
-    private string ServerTimeText => _serverTime is not { } serverTime ?
-        "Server time unavailable" :
-        $"{serverTime.Add(DateTimeOffset.UtcNow - _serverTimeReceivedAtUtc).ToString("d MMM yyyy HH:mm:ss", CultureInfo.InvariantCulture)} · {_reportingTimezone}";
-
-    private string SystemStatusClass => _isOnline ? "online" : "offline";
-
-    private string SystemStatusText => _isOnline ?
-        $"Online · {DataFreshnessText}" :
-        $"Offline · {DataFreshnessText}";
-
-    private string SystemStatusTitle => _isOnline ?
-        "NetWatch is reachable. Freshness is based on the latest collected data." :
-        "NetWatch could not be reached during the latest status check.";
-
-    private string DataFreshnessText
-    {
-        get
-        {
-            if (_lastDataAtUtc is not { } lastDataAtUtc)
-            {
-                return "Waiting for data";
-            }
-
-            var age = DateTimeOffset.UtcNow - lastDataAtUtc;
-            if (age.TotalMinutes < 1)
-            {
-                return "Updated just now";
-            }
-
-            if (age.TotalHours < 1)
-            {
-                return $"Updated {Math.Max(1, (int)age.TotalMinutes)} min ago";
-            }
-
-            if (age.TotalDays < 1)
-            {
-                return $"Updated {Math.Max(1, (int)age.TotalHours)} hr ago";
-            }
-
-            return $"Updated {Math.Max(1, (int)age.TotalDays)} d ago";
-        }
-    }
 
     protected override async Task OnInitializedAsync()
     {
+        State.Now = DateTimeOffset.UtcNow;
         await SynchronizeClockAsync();
         _clockTask = RunClockAsync();
     }
@@ -115,7 +67,7 @@
                     await SynchronizeClockAsync();
                 }
 
-                await InvokeAsync(StateHasChanged);
+                State.Now = DateTimeOffset.UtcNow;
             }
         }
         catch (OperationCanceledException) when (_clockCancellation.IsCancellationRequested)
@@ -130,15 +82,20 @@
             var status = await _http.GetFromJsonAsync<SystemStatusResponse>("api/status", _clockCancellation.Token);
             if (status is not null)
             {
-                _isOnline = true;
-                _serverTime = status.CurrentTime;
-                _serverTimeReceivedAtUtc = DateTimeOffset.UtcNow;
-                _reportingTimezone = status.ReportingTimezone;
+                var receivedAtUtc = DateTimeOffset.UtcNow;
+                Reactive.Batch(() =>
+                {
+                    State.IsOnline = true;
+                    State.ServerTime = status.CurrentTime;
+                    State.ServerTimeReceivedAtUtc = receivedAtUtc;
+                    State.Now = receivedAtUtc;
+                    State.ReportingTimezone = status.ReportingTimezone;
+                });
             }
         }
         catch (HttpRequestException)
         {
-            _isOnline = false;
+            State.IsOnline = false;
             return;
         }
 
@@ -149,7 +106,7 @@
                 _clockCancellation.Token);
             if (diagnostics is not null)
             {
-                _lastDataAtUtc = diagnostics.LastFlushAtUtc ?? diagnostics.LastFlowAtUtc;
+                State.LastDataAtUtc = diagnostics.LastFlushAtUtc ?? diagnostics.LastFlowAtUtc;
             }
         }
         catch (HttpRequestException)
@@ -157,7 +114,7 @@
         }
     }
 
-    public async ValueTask DisposeAsync()
+    protected override async ValueTask DisposeAsyncCore()
     {
         await _clockCancellation.CancelAsync();
         _clockTimer.Dispose();
@@ -168,5 +125,7 @@
         }
 
         _clockCancellation.Dispose();
+
+        await base.DisposeAsyncCore();
     }
 }
