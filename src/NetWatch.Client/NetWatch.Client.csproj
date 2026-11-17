@@ -4,7 +4,6 @@
     <TargetFramework>net11.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <StaticWebAssetProjectMode>Default</StaticWebAssetProjectMode>
     <!-- BL0016: unguarded JS interop calls; the confirm() calls are intentionally left unwrapped. -->
     <NoWarn>$(NoWarn);BL0016</NoWarn>
   </PropertyGroup>
